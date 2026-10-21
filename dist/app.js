@@ -52,7 +52,9 @@
   function returnHome(){onboarding=false;navigate(state.onboardingComplete?'home':'welcome');}
   function header(){
     const sub=!['home','welcome'].includes(page);
-    return `<header class="app-header"><div class="header-start">${sub?`<button class="icon-button" data-action="back" aria-label="이전 화면">${icon('back')}</button>`:''}<button class="brand" data-action="home" aria-label="소복 홈">${brandMark}소복</button>${!sub?'<span class="prototype-badge">PROTOTYPE</span>':''}</div><button class="icon-button" data-action="settings" aria-label="설정">${icon('gear')}</button></header>`;
+    // 레시피 상세는 로고 대신 '뒤로가기' 글자 버튼
+    const start=page==='detail'?`<button class="back-link" data-action="back">${icon('back')}<span>뒤로가기</span></button>`:null;
+    return `<header class="app-header"><div class="header-start">${start??`${sub?`<button class="icon-button" data-action="back" aria-label="이전 화면">${icon('back')}</button>`:''}<button class="brand" data-action="home" aria-label="소복 홈">${brandMark}소복</button>${!sub?'<span class="prototype-badge">PROTOTYPE</span>':''}`}</div><button class="icon-button" data-action="settings" aria-label="설정">${icon('gear')}</button></header>`;
   }
   function nav(){return page==='welcome'||onboarding||!state.onboardingComplete?'':`<nav class="bottom-nav" aria-label="주요 메뉴">${[['home','내 집','home'],['fridge','냉장고','fridge'],['recipes','요리책','book'],['kitchen','내 주방','pot']].map(([id,label,ic])=>`<button class="nav-button ${page===id||id==='recipes'&&page==='detail'?'active':''}" data-action="nav" data-page="${id}" ${page===id||id==='recipes'&&page==='detail'?'aria-current="page"':''}>${icon(ic)}<span>${label}</span></button>`).join('')}</nav>`;}
   function banner(){return !storageAvailable?`<div class="memory-banner" role="status">${icon('info')}이 브라우저에서는 저장할 수 없어 이번 방문 동안만 유지돼요. 새로고침하면 초기화돼요.</div>`:recoveryNotice?`<div class="memory-banner" role="status">저장된 정보를 읽지 못해 처음 상태로 복구했어요. 다시 설정해주세요.</div>`:'';}
