@@ -1,0 +1,4 @@
+.backup/
+.omc/
+.DS_Store
+node_modules/
