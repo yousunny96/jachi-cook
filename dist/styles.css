@@ -265,8 +265,8 @@
 .fp-cta{margin-top:2px}
 .roulette-card .friend-pick{box-shadow:none}
 @media(max-width:359px){.fp-face{width:62px;height:62px}.fp-quote{font-size:18px}.fp-name{font-size:18px}}
-/* 2026-10-22 재료·양념 픽셀 아이콘(ingredient-icons.png, 10열 × 8줄) */
-.ing-icon{display:inline-block;width:40px;height:40px;flex-shrink:0;background:url(assets/ingredient-icons.png) no-repeat;background-size:1000% 800%;image-rendering:auto}
+/* 2026-10-22 재료·양념 픽셀 아이콘(ingredient-icons.png, 10열 × 9줄) */
+.ing-icon{display:inline-block;width:40px;height:40px;flex-shrink:0;background:url(assets/ingredient-icons.png) no-repeat;background-size:1000% 900%;image-rendering:auto}
 .ingredient-button .ing-icon{width:40px;height:40px;margin-top:-4px}
 .condiment-button{display:inline-flex;align-items:center;gap:5px}
 .condiment-button .ing-icon{width:24px;height:24px;margin:-3px 0 -3px -4px}
