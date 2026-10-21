@@ -25,17 +25,35 @@
   JP.ingredients.forEach(([id,name,category,emoji,aliases])=>{if(!ingredients.some(x=>x.id===id))ingredients.push({id,name,category,emoji,aliases});});
   JP.condiments.forEach(([id,name])=>{if(!condiments.some(x=>x.id===id))condiments.push({id,name});});
   const rawCharacters = [
-    ['chiikawa','치이카와','다정하고 끈기 있는',[57,114,347,348],['천천히… 같이 해보자.','조금씩 해보면 할 수 있어!','끝까지 해냈네… 정말 기뻐!']],
-    ['hachiware','하치와레','함께라서 더 즐거운',[498,97,353,364],['냉장고에 뭐가 있는지 같이 볼까?','같이 만들면 더 맛있겠다!','너랑 만드니까 더 즐거웠어!']],
-    ['usagi','우사기','활발한 장난꾸러기',[939,43,326,425],['야하! 냉장고 탐험!','이거다! 오늘의 한 끼 출발!','와하! 한 그릇 완성!']],
-    ['shisa','시사','성실한 나눔 친구',[1334,102,413,364],['재료부터 차근차근 준비할게요!','정성껏 한 끼 만들어봐요!','맛있게 됐네요! 함께 나누고 싶어요.']],
-    ['momonga','모몽가','자유로운 응석쟁이',[36,482,438,378],['나 맛있는 거 먹고 싶어!','이거 해줘! 지금 이게 끌려!','내 것도 예쁘게 담아줘!']],
-    ['rakko','랏코','든든하고 다정한',[499,509,379,350],['준비됐나? 내가 곁에 있을게.','서두르지 마. 한 단계씩 하면 돼.','잘했다. 이제 든든하게 먹자.']],
-    ['kurimanju','쿠리만쥬','한 가지에 푹 빠지는',[933,528,338,332],['오늘은 어떤 한 끼가 기다릴까.','음… 오늘은 이 한 그릇에 집중.','후아… 잘 먹었다. 여운이 좋네.']],
-    ['kani','카니','이야기를 잘 듣는',[1360,489,350,372],['오늘 뭐 먹고 싶어? 들어줄게.','네가 끌리는 걸로 함께 골라보자.','오늘 요리는 어땠어? 궁금해.']]
+    ['chiikawa','치이카와','다정하고 끈기 있는',[57,114,347,348],['와아…!','조금씩 해보면 할 수 있어!','끝까지 해냈네… 정말 기뻐!']],
+    ['hachiware','하치와레','함께라서 더 즐거운',[498,97,353,364],['맛있는 거 같이 만들어 볼까?','같이 만들면 더 맛있겠다!','너랑 만드니까 더 즐거웠어!']],
+    ['usagi','우사기','활발한 장난꾸러기',[939,43,326,425],['쁘리야하이햐!','이거다! 오늘의 한 끼 출발!','와하! 한 그릇 완성!']],
+    ['shisa','시사','성실한 나눔 친구',[1334,102,413,364],['오늘도 든든하게 챙겨 드세요!','정성껏 한 끼 만들어봐요!','맛있게 됐네요! 함께 나누고 싶어요.']],
+    ['momonga','모몽가','자유로운 응석쟁이',[36,482,438,378],['맛있는 음식 내놔!','이거 해줘! 지금 이게 끌려!','내 것도 예쁘게 담아줘!']],
+    ['rakko','랏코','든든하고 다정한',[499,509,379,350],['오늘은 든든하게 먹자.','서두르지 마. 한 단계씩 하면 돼.','잘했다. 이제 든든하게 먹자.']],
+    ['kurimanju','쿠리만쥬','한 가지에 푹 빠지는',[933,528,338,332],['하아… 맛 좋군.','음… 오늘은 이 한 그릇에 집중.','후아… 잘 먹었다. 여운이 좋네.']],
+    ['kani','카니','이야기를 잘 듣는',[1360,489,350,372],['오늘은 뭐가 먹고 싶어요?','네가 끌리는 걸로 함께 골라보자.','오늘 요리는 어땠어? 궁금해.']]
   ];
-  // crop: assets/characters-pixel.webp(1774×887, 배경 투명) 안에서 친구 한 명의 x,y,너비,높이
-  const characters=rawCharacters.map(([id,name,personality,crop,dialogues])=>({id,name,personality,crop,dialogues}));
+  // 재료·양념 아이콘: 그림판 ingredient-icons.png(75px 칸, 10열 × 8줄)에서 몇 번째 칸인지. 없는 재료(고추·치즈·토마토소스)는 이모지로 보여 준다.
+  const iconIndex={"green-onion":0,"onion":1,"carrot":2,"potato":3,"mushroom":4,"cabbage":5,"zucchini":6,"garlic":7,"tomato":8,"cucumber":9,"spinach":10,"king-oyster":11,"ginger":12,"radish":13,"bell-pepper":14,"pork":15,"chicken":16,"beef":17,"ham":18,"bacon":19,"chicken-thigh":20,"beef-slice":21,"ground-beef":22,"pork-slice":23,"ground-pork":24,"sausage":25,"tuna":26,"shrimp":27,"squid":28,"fish-cake":29,"salmon":30,"egg":31,"milk":32,"butter":33,"rice":34,"kimchi":35,"tofu":36,"noodles":37,"bread":38,"seaweed":39,"rice-cake":40,"soft-tofu":41,"pasta":42,"curry-powder":43,"jjajang-powder":44,"pancake-mix":45,"starch":46,"udon":47,"soba":48,"chuka-noodles":49,"seasoned-fried-tofu":50,"silken-tofu":51,"wakame":52,"flour":53,"panko":54,"curry-roux":55,"salt":56,"oil":57,"soy":58,"sugar":59,"pepper-powder":60,"sesame-oil":61,"gochujang":62,"doenjang":63,"chili-powder":64,"vinegar":65,"ketchup":66,"mayonnaise":67,"mirin":68,"dashi":69,"mentsuyu":70,"miso":71,"sesame":72,"yakisoba-sauce":73,"okonomiyaki-sauce":74,"worcester":75,"ground-chicken":24,"hayashi-roux":55};
+  ingredients.forEach(x=>{if(iconIndex[x.id]!=null)x.icon=iconIndex[x.id];});
+  condiments.forEach(x=>{if(iconIndex[x.id]!=null)x.icon=iconIndex[x.id];});
+  // 추천 카드에서 친구가 하는 말. quotes는 큰 따옴표 대사, subs는 아래 한 줄({요리}·{시간}·{난이도}를 채워 넣음).
+  // 요리 이름 바로 뒤에는 조사를 붙이지 않는다(받침에 따라 달라지므로).
+  const pickLines={
+    chiikawa:{quotes:['와아…!','이거… 먹고 싶어…!','할 수 있을지도…!'],subs:['{요리}… 같이 만들면 할 수 있을 것 같아…!','{시간}분이면 된대… 조금씩 해 보자…!','{난이도} 요리래… 천천히 따라 해 볼게…!']},
+    hachiware:{quotes:['맛있는 거 같이 만들어 볼까?','이거 진짜 맛있겠다!','오늘은 이걸로 하자!'],subs:['오늘은 {요리} 어때? 같이 하면 더 맛있을 거야!','{시간}분이면 완성! 내가 옆에서 도와줄게.','{난이도} 요리니까 우리라면 할 수 있어!']},
+    usagi:{quotes:['쁘리야하이햐!','야하!','우라!'],subs:['{요리}!! 지금 당장 만들자! 하아앗!','{시간}분 컷! 우라라라!','오늘은 {요리}! 출발! 야하!']},
+    shisa:{quotes:['오늘도 든든하게 챙겨 드세요!','정성껏 만들어 볼게요!','이거 추천해요!'],subs:['오늘은 {요리}! 차근차근 준비하면 금방이에요.','{시간}분이면 따뜻한 한 끼가 완성돼요!','{난이도} 요리라 부담 없이 해 볼 수 있어요.']},
+    momonga:{quotes:['맛있는 음식 내놔!','이거 해 줘!','나 이거 먹을래!'],subs:['귀찮아도 맛은 포기 못 해! 오늘은 {요리}!','{시간}분? 빨리 만들어 줘!','{요리} 아니면 안 먹어! 진짜야!']},
+    rakko:{quotes:['오늘은 든든하게 먹자.','좋은 선택이다.','한 단계씩 하면 된다.'],subs:['{요리}. 서두르지 말고 한 단계씩 가자.','{시간}분이면 충분하다. 내가 곁에 있지.','{난이도} 요리지만 방심은 금물이다.']},
+    kurimanju:{quotes:['하아… 맛 좋군.','음… 이거군.','하아… 오늘은 이거다.'],subs:['{요리}… 한 입 먹으면 하아… 소리가 절로 나오겠군.','{시간}분 기다린 보람이 있을 거다.','오늘은 {요리}. 여유롭게 즐겨 보자.']},
+    kani:{quotes:['오늘은 뭐가 먹고 싶어요?','이거 어때요?','같이 골라 봤어요!'],subs:['{요리} 어때요? 마음에 들면 같이 만들어요.','{시간}분이면 만들 수 있대요. 천천히 해요!','{난이도} 요리라 편하게 해 볼 수 있어요.']}
+  };
+  // crop: 친구 그림판 characters-pixel.png(1774×887, 배경 투명) 안에서 친구 한 명의 x,y,너비,높이
+  // face: 얼굴만 있는 그림판 character-faces.webp(1774×887, 배경 투명) 안의 x,y,너비,높이. 추천 카드에서 씀.
+  const faceCrops={chiikawa:[41,125,392,324],hachiware:[487,126,380,329],usagi:[912,50,349,405],shisa:[1297,126,446,323],momonga:[36,527,394,322],rakko:[488,537,390,303],kurimanju:[905,536,380,309],kani:[1341,506,378,334]};
+  const characters=rawCharacters.map(([id,name,personality,crop,dialogues])=>({id,name,personality,crop,dialogues,pick:pickLines[id],face:faceCrops[id]}));
   // AI-authored drafts, not human-reviewed recipes. Inventory matching stays deterministic.
   const drafts=typeof module==='object'&&module.exports?require('./recipe-drafts.js'):root.SobokRecipeDrafts;
   const recipes = [

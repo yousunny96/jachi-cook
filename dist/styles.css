@@ -245,3 +245,35 @@
 .character-card small{white-space:normal;text-align:center;word-break:keep-all;line-height:1.3}
 .cuisine-tabs{overflow-x:auto;scrollbar-width:none}.cuisine-tabs::-webkit-scrollbar{display:none}.cuisine-tab{flex-shrink:0;white-space:nowrap}
 @media(max-width:400px){.cuisine-tab{padding:12px 8px 13px;font-size:14px}.cuisine-tab span{font-size:11px}.cuisine-tab.active::after{left:6px;right:6px}}
+/* 2026-10-22 친구 추천 카드(랜덤 결과·레시피 상세): 고른 친구가 요리를 소개 */
+.friend-pick{display:grid;gap:12px;background:#fffaf2;border:1.5px solid #ecdcca;border-radius:24px;padding:14px;box-shadow:0 4px 14px #6d482110}
+.fp-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fp-kicker{font-size:12px;color:#8a6d57;font-weight:700}
+.fp-chip{font-size:11px;font-weight:800;color:#5b3a2b;background:#f3e6d6;border-radius:12px;padding:5px 10px;white-space:nowrap}
+.fp-talk{display:flex;align-items:center;gap:12px}
+.fp-face{width:76px;height:76px;flex-shrink:0;border-radius:18px;background:#fff;border:2px solid #5b3a2b;box-shadow:0 3px 0 #5b3a2b;padding:6px 5px 3px;overflow:hidden}
+.fp-face .avatar{width:100%;height:100%}
+.fp-words{min-width:0}
+.fp-quote{font-size:21px;font-weight:850;letter-spacing:-.8px;line-height:1.3;color:#3f2418;word-break:keep-all}
+.fp-sub{font-size:12.5px;color:#7d604b;line-height:1.55;margin-top:5px;word-break:keep-all}
+.fp-art{position:relative;border-radius:18px;overflow:hidden}
+.fp-art .food-art{aspect-ratio:1.6;border-radius:18px}
+.fp-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.fp-name{font-size:20px;font-weight:850;letter-spacing:-.7px;line-height:1.3;margin:0}
+.fp-meta{font-size:12px;color:#8a6d57;white-space:nowrap}
+.friend-pick .random-status{margin:0}
+.fp-cta{margin-top:2px}
+.roulette-card .friend-pick{box-shadow:none}
+@media(max-width:359px){.fp-face{width:62px;height:62px}.fp-quote{font-size:18px}.fp-name{font-size:18px}}
+/* 2026-10-22 재료·양념 픽셀 아이콘(ingredient-icons.png, 10열 × 8줄) */
+.ing-icon{display:inline-block;width:40px;height:40px;flex-shrink:0;background:url(assets/ingredient-icons.png) no-repeat;background-size:1000% 800%;image-rendering:auto}
+.ingredient-button .ing-icon{width:40px;height:40px;margin-top:-4px}
+.condiment-button{display:inline-flex;align-items:center;gap:5px}
+.condiment-button .ing-icon{width:24px;height:24px;margin:-3px 0 -3px -4px}
+.condiment-button .emoji{font-size:16px}
+/* 추천 카드 친구 얼굴: 흰 상자 없이 얼굴 그림만 */
+.fp-face{width:78px;height:72px;background:none;border:0;box-shadow:none;border-radius:0;padding:0;overflow:visible}
+.fp-face .face-art{width:100%;height:100%;display:block}
+@media(max-width:359px){.fp-face{width:64px;height:60px}}
+/* 레시피 상세 요리 이름(h1)은 화면 이동 때 코드로 포커스를 받으므로 파란 테두리를 숨긴다 */
+.fp-name:focus{outline:none}

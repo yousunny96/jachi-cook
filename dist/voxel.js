@@ -207,10 +207,10 @@
   }
   /* ---------- 그림 방(픽셀 일러스트) ----------
    * data-room-image="assets/…"가 있으면 블록 방 대신 그 그림을 그린다. 위치는 data-pos="x,y"(그림 기준 %).
-   * 그림 바깥의 단색 배경은 처음 한 번 투명하게 지워서 친구별 하늘색이 비치게 한다. */
-  const IMAGE_ROOM = { aspect: 1, fit: 1.02, size: 1254,
-    // 누르면 반짝이는 가구 영역(그림 픽셀 기준 x0,y0,x1,y1)
-    props: { fridge: [75, 330, 312, 820], kitchen: [900, 520, 1070, 640], recipes: [865, 785, 1015, 865] } };
+   * 그림 바깥의 단색 배경은 처음 한 번 투명하게 지워서 친구별 하늘색이 비치게 한다.
+   * data-room-open="fridge=…|kitchen=…|recipes=…": 누른 가구가 열린 같은 크기의 그림. 열릴 때 그 그림으로 서서히 바뀐다. */
+  const IMAGE_ROOM = { aspect: 1, fit: 1.02 };
+  const openImagesOf = container => Object.fromEntries((container.dataset.roomOpen || '').split('|').filter(Boolean).map(p => { const i = p.indexOf('='); return [p.slice(0, i), p.slice(i + 1)]; })); // 단일 HTML에선 값이 data URI(= 포함)
   const roomImages = {};
   function clearBackdrop(img) {
     const w = img.naturalWidth, h = img.naturalHeight, c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -240,23 +240,12 @@
     if (!e.canvas && onReady) e.waiting.push(onReady);
     return e.canvas;
   }
-  // 그림은 문을 움직일 수 없으니, 누른 가구가 환해지고 픽셀 반짝이가 퍼지는 것으로 '열림'을 보여 준다.
-  function drawImageRoom(ctx, img, w, h, open) {
+  // 기본 그림 위에 누른 가구가 열린 그림을 t만큼 겹쳐 그린다(t=1이면 완전히 열린 그림).
+  function drawImageRoom(ctx, img, w, h, open, openImg) {
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, 0, 0, w, h);
-    const r = IMAGE_ROOM.props[open.which]; if (!r || !open.t) return;
-    const k = w / IMAGE_ROOM.size, cx = (r[0] + r[2]) / 2 * k, cy = (r[1] + r[3]) / 2 * k, R = Math.max(r[2] - r[0], r[3] - r[1]) / 2 * k;
-    const glow = Math.sin(Math.PI * Math.min(1, open.t * 1.4)) * 0.6 + open.t * 0.25;
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.25);
-    g.addColorStop(0, `rgba(255,236,200,${glow})`); g.addColorStop(1, 'rgba(255,236,200,0)');
-    ctx.fillStyle = g; ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6); ctx.restore();
-    const s = Math.max(3, Math.round(w / 110)), a = 1 - open.t;
-    for (let i = 0; i < 8; i++) {
-      const ang = i / 8 * Math.PI * 2 + 0.3, d = R * (0.7 + open.t * 0.9), x = cx + Math.cos(ang) * d, y = cy + Math.sin(ang) * d * 0.8;
-      ctx.fillStyle = i % 2 ? `rgba(255,255,255,${a})` : `rgba(255,214,120,${a})`;
-      ctx.fillRect(Math.round(x - s / 2), Math.round(y - s * 1.5), s, s * 3); ctx.fillRect(Math.round(x - s * 1.5), Math.round(y - s / 2), s * 3, s);
-    }
+    if (!openImg || !open.t) return;
+    ctx.globalAlpha = open.t; ctx.drawImage(openImg, 0, 0, w, h); ctx.globalAlpha = 1;
   }
   const aspectOf = container => container.dataset.roomImage ? IMAGE_ROOM.aspect : ROOM_ASPECT;
   function paintRoom(container) {
@@ -265,7 +254,8 @@
     const open = container._sobokOpen || { which: '', t: 0 };
     if (container.dataset.roomImage) {
       const img = roomImage(container.dataset.roomImage, () => paintRoom(container));
-      const ctx = sizeCanvas(canvas, w, h); if (img) drawImageRoom(ctx, img, w, h, open); return;
+      const openSrc = openImagesOf(container)[open.which], openImg = openSrc && roomImage(openSrc);
+      const ctx = sizeCanvas(canvas, w, h); if (img) drawImageRoom(ctx, img, w, h, open, openImg); return;
     }
     const ctx = sizeCanvas(canvas, w, h);
     ctx.drawImage(renderRoomBitmap(w), 0, 0, w, h);
@@ -281,6 +271,8 @@
       if (fw > 0) { container.style.width = fw + 'px'; container.style.height = fw / aspect + 'px'; }
     }
     paintRoom(container);
+    // 열린 그림은 미리 불러 두어 누르자마자 바뀌게 한다.
+    Object.values(openImagesOf(container)).forEach(src => roomImage(src));
     container.querySelectorAll('[data-anchor]').forEach(el => {
       const [x, y, z] = el.dataset.anchor.split(',').map(Number), [px, py] = roomPercent(x, y, z);
       el.style.left = px + '%'; el.style.top = py + '%';
