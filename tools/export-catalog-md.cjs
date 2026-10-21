@@ -16,8 +16,8 @@ const en = id => { if (!EN[id]) throw new Error('영어 이름 없음: ' + id); 
 const name = (list, id) => list.find(x => x.id === id).name;
 const cell = s => String(s).replace(/\|/g, '\\|');
 const table = (head, rows) => [`| ${head.join(' | ')} |`, `| ${head.map(() => '---').join(' | ')} |`, ...rows.map(r => `| ${r.map(cell).join(' | ')} |`)].join('\n');
-const COLS = 10; // 요리 그림판 food-dishes.webp는 10열 × 6행 한 장: 위 3줄 한식, 아래 3줄 일본식(imageIndex 순서)
-const pos = i => `${Math.floor(i / COLS) + 1}행 ${i % COLS + 1}열`;
+// 요리 그림판 dishes-1~3.webp: 각 4열 × 5줄 = 20칸. 한식 30 → 일본식 30 순서로 이어서 채운다.
+const pos = g => `dishes-${Math.floor(g / 20) + 1} ${Math.floor(g % 20 / 4) + 1}행 ${g % 4 + 1}열`;
 
 const cats = D.categories.filter(c => c !== '전체');
 const ingredients = cats.flatMap(c => D.ingredients.filter(i => i.category === c));
@@ -31,7 +31,7 @@ const md = `# 소복 재료·요리 목록 (이미지 생성용)
 
 - 냉장고 재료 ${D.ingredients.length}개 · 양념 ${D.condiments.length}개 · 도구 ${D.tools.length}개
 - 요리 ${D.recipes.length}개 (한식 ${byAtlas('kr').length} · 일본식 ${byAtlas('jp').length})
-- 요리 그림판: **10열 × 6행 한 장**(위 3줄 한식, 아래 3줄 일본식). 표의 \`#\` 순서대로 왼쪽 위부터 오른쪽으로, 줄이 끝나면 다음 줄로 채워요. 순서가 바뀌면 앱에서 다른 요리 그림이 나와요.
+- 요리 그림판: **4열 × 5줄 그림판 3장**(한식 30개 → 일본식 30개 순서로 20개씩). 표의 \`#\` 순서대로 왼쪽 위부터 오른쪽으로, 줄이 끝나면 다음 줄로 채워요. 순서가 바뀌면 앱에서 다른 요리 그림이 나와요.
 
 ## 프롬프트 예시
 
@@ -39,7 +39,7 @@ const md = `# 소복 재료·요리 목록 (이미지 생성용)
 > Cute pixel-art food icon of {English}, single item centered, soft pastel colors, thin dark brown outline, transparent background, cozy Korean kitchen game style, no text.
 
 **요리 그림판**
-> A 10 columns × 6 rows grid sprite sheet of cute pixel-art home dishes (top 3 rows Korean, bottom 3 rows Japanese), each dish in a pastel bowl or plate seen from slightly above, same size and spacing in every cell, soft pastel colors, thin dark brown outline, plain light background, no text, no labels. Fill the cells left-to-right, top-to-bottom in this order: {English 목록을 # 순서대로}.
+> A 4 columns × 5 rows grid sprite sheet of cute pixel-art home dishes, each dish in a pastel bowl or plate seen from slightly above, same size and spacing in every cell, soft pastel colors, thin dark brown outline, plain light background, no text, no labels. Fill the cells left-to-right, top-to-bottom in this order: {English 목록을 # 순서대로}.
 
 ## 1. 내 냉장고 — 재료 ${D.ingredients.length}개
 
@@ -53,11 +53,11 @@ ${table(['양념', 'English'], D.condiments.map(c => [c.name, en(c.id)]))}
 
 ${table(['도구', 'English'], D.tools.map(t => [t.name, en(t.id)]))}
 
-## 4. 요리책 — 한식 ${byAtlas('kr').length}개 (그림판 \`food-dishes.webp\` 1~3줄)
+## 4. 요리책 — 한식 ${byAtlas('kr').length}개 (그림판 \`dishes-1\`, \`dishes-2\` 앞쪽)
 
 ${table(recipeHead, recipeRows(byAtlas('kr')))}
 
-## 5. 요리책 — 일본식 ${byAtlas('jp').length}개 (그림판 \`food-dishes.webp\` 4~6줄)
+## 5. 요리책 — 일본식 ${byAtlas('jp').length}개 (그림판 \`dishes-2\` 뒤쪽, \`dishes-3\`)
 
 ${table(recipeHead, recipeRows(byAtlas('jp')))}
 

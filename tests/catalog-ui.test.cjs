@@ -11,7 +11,7 @@ function appWith(state){
 const state={version:1,onboardingComplete:true,selectedCharacter:'hachiware',ingredients:D.ingredients.map(x=>x.id),tools:D.tools.map(x=>x.id),condiments:D.condiments.map(x=>x.id)};
 test('all 60 detail screens render own image crop, quantities and numbered steps',()=>{
  const app=appWith(state);assert.equal(D.recipes.length,60);
- const crops=new Set();for(const r of D.recipes){app.click('recipe',r.id);const h=app.html();assert.ok(h.includes(r.name));assert.ok(h.includes('cooking-steps'));const atlas='food-dishes.webp';assert.ok(h.includes(atlas));const crop=h.match(/class="food-art" viewBox="([^"]+)"/)[1];crops.add(atlas+crop);}
+ const crops=new Set();for(const r of D.recipes){app.click('recipe',r.id);const h=app.html();assert.ok(h.includes(r.name));assert.ok(h.includes('cooking-steps'));const m=h.match(/class="food-art" viewBox="([^"]+)"[^]*?<image href="(assets\/dishes-[123]\.webp)"/);assert.ok(m,r.id);crops.add(m[2]+' '+m[1]);}
  assert.equal(crops.size,60);
 });
 test('no-tool home includes no-heat dishes and catalog exposes all menus',()=>{

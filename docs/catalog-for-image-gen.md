@@ -4,7 +4,7 @@
 
 - 냉장고 재료 61개 · 양념 20개 · 도구 6개
 - 요리 60개 (한식 30 · 일본식 30)
-- 요리 그림판: **10열 × 6행 한 장**(위 3줄 한식, 아래 3줄 일본식). 표의 `#` 순서대로 왼쪽 위부터 오른쪽으로, 줄이 끝나면 다음 줄로 채워요. 순서가 바뀌면 앱에서 다른 요리 그림이 나와요.
+- 요리 그림판: **4열 × 5줄 그림판 3장**(한식 30개 → 일본식 30개 순서로 20개씩). 표의 `#` 순서대로 왼쪽 위부터 오른쪽으로, 줄이 끝나면 다음 줄로 채워요. 순서가 바뀌면 앱에서 다른 요리 그림이 나와요.
 
 ## 프롬프트 예시
 
@@ -12,7 +12,7 @@
 > Cute pixel-art food icon of {English}, single item centered, soft pastel colors, thin dark brown outline, transparent background, cozy Korean kitchen game style, no text.
 
 **요리 그림판**
-> A 10 columns × 6 rows grid sprite sheet of cute pixel-art home dishes (top 3 rows Korean, bottom 3 rows Japanese), each dish in a pastel bowl or plate seen from slightly above, same size and spacing in every cell, soft pastel colors, thin dark brown outline, plain light background, no text, no labels. Fill the cells left-to-right, top-to-bottom in this order: {English 목록을 # 순서대로}.
+> A 4 columns × 5 rows grid sprite sheet of cute pixel-art home dishes, each dish in a pastel bowl or plate seen from slightly above, same size and spacing in every cell, soft pastel colors, thin dark brown outline, plain light background, no text, no labels. Fill the cells left-to-right, top-to-bottom in this order: {English 목록을 # 순서대로}.
 
 ## 1. 내 냉장고 — 재료 61개
 
@@ -138,75 +138,75 @@
 | 에어프라이어 | air fryer |
 | 전기밥솥 | rice cooker |
 
-## 4. 요리책 — 한식 30개 (그림판 `food-dishes.webp` 1~3줄)
+## 4. 요리책 — 한식 30개 (그림판 `dishes-1`, `dishes-2` 앞쪽)
 
 | # | 그림판 위치 | 요리 | English | 난이도 | 시간 | 주재료 | 도구 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 1행 1열 | 간장계란밥 | soy sauce egg rice | 쉬움 | 10분 | 밥, 계란 | 프라이팬 |
-| 2 | 1행 2열 | 대파 계란볶음밥 | green onion egg fried rice | 쉬움 | 15분 | 밥, 계란, 대파 | 프라이팬 |
-| 3 | 1행 3열 | 참치마요덮밥 | tuna mayo rice bowl | 쉬움 | 10분 | 밥, 참치캔, 김 | 가열 없이 |
-| 4 | 1행 4열 | 스팸마요덮밥 | Spam mayo rice bowl | 쉬움 | 15분 | 밥, 햄, 계란 | 프라이팬 |
-| 5 | 1행 5열 | 참치주먹밥 | tuna rice balls | 쉬움 | 10분 | 밥, 참치캔, 김 | 가열 없이 |
-| 6 | 1행 6열 | 전자레인지 계란찜 | microwave steamed egg | 쉬움 | 10분 | 계란, 대파 | 전자레인지 |
-| 7 | 1행 7열 | 계란국 | egg drop soup | 쉬움 | 10분 | 계란, 대파 | 냄비 |
-| 8 | 1행 8열 | 두부부침 | pan-fried tofu | 쉬움 | 15분 | 두부 | 프라이팬 |
-| 9 | 1행 9열 | 양배추 계란전 | cabbage egg pancake | 쉬움 | 15분 | 양배추, 계란 | 프라이팬 |
-| 10 | 1행 10열 | 계란 토스트 | egg toast | 쉬움 | 10분 | 식빵, 계란 | 프라이팬 |
-| 11 | 2행 1열 | 간장비빔국수 | soy sauce cold noodles | 쉬움 | 15분 | 소면, 대파 | 냄비 |
-| 12 | 2행 2열 | 새송이버섯 버터구이 | butter-grilled king oyster mushroom | 쉬움 | 10분 | 새송이버섯, 버터 | 프라이팬 |
-| 13 | 2행 3열 | 김치볶음밥 | kimchi fried rice | 보통 | 15분 | 밥, 김치, 대파 | 프라이팬 |
-| 14 | 2행 4열 | 참치김치찌개 | tuna kimchi stew | 보통 | 20분 | 김치, 참치캔, 두부 | 냄비 |
-| 15 | 2행 5열 | 된장찌개 | doenjang stew | 보통 | 20분 | 두부, 애호박, 양파 | 냄비 |
-| 16 | 2행 6열 | 순두부찌개 | soft tofu stew (sundubu-jjigae) | 보통 | 20분 | 순두부, 계란, 대파 | 냄비 |
-| 17 | 2행 7열 | 간단 부대찌개 | easy army stew (budae-jjigae) | 보통 | 25분 | 햄, 김치, 두부, 대파 | 냄비 |
-| 18 | 2행 8열 | 떡볶이 | tteokbokki | 보통 | 20분 | 떡, 어묵, 대파 | 냄비 |
-| 19 | 2행 9열 | 카레라이스 | Korean curry rice | 보통 | 30분 | 밥, 감자, 양파, 카레가루 | 냄비 |
-| 20 | 2행 10열 | 짜장덮밥 | jjajang rice bowl | 보통 | 25분 | 밥, 양파, 양배추, 짜장가루 | 프라이팬 |
-| 21 | 3행 1열 | 원팬 토마토 파스타 | one-pan tomato pasta | 보통 | 20분 | 파스타면, 토마토소스, 양파 | 프라이팬 |
-| 22 | 3행 2열 | 원팬 우유 크림 파스타 | one-pan milk cream pasta | 보통 | 25분 | 파스타면, 우유, 치즈, 베이컨 | 프라이팬 |
-| 23 | 3행 3열 | 두부조림 | braised tofu | 보통 | 20분 | 두부, 양파, 대파 | 프라이팬 |
-| 24 | 3행 4열 | 감자조림 | braised potatoes | 보통 | 25분 | 감자, 양파 | 냄비 |
-| 25 | 3행 5열 | 계란말이 | Korean rolled omelette | 어려움 | 20분 | 계란, 대파, 당근 | 프라이팬 |
-| 26 | 3행 6열 | 오므라이스 | omurice | 어려움 | 30분 | 밥, 계란, 양파, 햄 | 프라이팬 |
-| 27 | 3행 7열 | 김치전 | kimchi pancake | 어려움 | 25분 | 김치, 부침가루 | 프라이팬 |
-| 28 | 3행 8열 | 감자채전 | shredded potato pancake | 어려움 | 25분 | 감자, 감자전분 | 프라이팬 |
-| 29 | 3행 9열 | 제육볶음 | spicy stir-fried pork (jeyuk) | 어려움 | 30분 | 돼지고기, 양파, 대파, 마늘 | 프라이팬 |
-| 30 | 3행 10열 | 닭볶음탕 | spicy braised chicken (dakbokkeumtang) | 어려움 | 45분 | 닭고기, 감자, 양파, 대파, 마늘 | 냄비 |
+| 1 | dishes-1 1행 1열 | 간장계란밥 | soy sauce egg rice | 쉬움 | 10분 | 밥, 계란 | 프라이팬 |
+| 2 | dishes-1 1행 2열 | 대파 계란볶음밥 | green onion egg fried rice | 쉬움 | 15분 | 밥, 계란, 대파 | 프라이팬 |
+| 3 | dishes-1 1행 3열 | 참치마요덮밥 | tuna mayo rice bowl | 쉬움 | 10분 | 밥, 참치캔, 김 | 가열 없이 |
+| 4 | dishes-1 1행 4열 | 스팸마요덮밥 | Spam mayo rice bowl | 쉬움 | 15분 | 밥, 햄, 계란 | 프라이팬 |
+| 5 | dishes-1 2행 1열 | 참치주먹밥 | tuna rice balls | 쉬움 | 10분 | 밥, 참치캔, 김 | 가열 없이 |
+| 6 | dishes-1 2행 2열 | 전자레인지 계란찜 | microwave steamed egg | 쉬움 | 10분 | 계란, 대파 | 전자레인지 |
+| 7 | dishes-1 2행 3열 | 계란국 | egg drop soup | 쉬움 | 10분 | 계란, 대파 | 냄비 |
+| 8 | dishes-1 2행 4열 | 두부부침 | pan-fried tofu | 쉬움 | 15분 | 두부 | 프라이팬 |
+| 9 | dishes-1 3행 1열 | 양배추 계란전 | cabbage egg pancake | 쉬움 | 15분 | 양배추, 계란 | 프라이팬 |
+| 10 | dishes-1 3행 2열 | 계란 토스트 | egg toast | 쉬움 | 10분 | 식빵, 계란 | 프라이팬 |
+| 11 | dishes-1 3행 3열 | 간장비빔국수 | soy sauce cold noodles | 쉬움 | 15분 | 소면, 대파 | 냄비 |
+| 12 | dishes-1 3행 4열 | 새송이버섯 버터구이 | butter-grilled king oyster mushroom | 쉬움 | 10분 | 새송이버섯, 버터 | 프라이팬 |
+| 13 | dishes-1 4행 1열 | 김치볶음밥 | kimchi fried rice | 보통 | 15분 | 밥, 김치, 대파 | 프라이팬 |
+| 14 | dishes-1 4행 2열 | 참치김치찌개 | tuna kimchi stew | 보통 | 20분 | 김치, 참치캔, 두부 | 냄비 |
+| 15 | dishes-1 4행 3열 | 된장찌개 | doenjang stew | 보통 | 20분 | 두부, 애호박, 양파 | 냄비 |
+| 16 | dishes-1 4행 4열 | 순두부찌개 | soft tofu stew (sundubu-jjigae) | 보통 | 20분 | 순두부, 계란, 대파 | 냄비 |
+| 17 | dishes-1 5행 1열 | 간단 부대찌개 | easy army stew (budae-jjigae) | 보통 | 25분 | 햄, 김치, 두부, 대파 | 냄비 |
+| 18 | dishes-1 5행 2열 | 떡볶이 | tteokbokki | 보통 | 20분 | 떡, 어묵, 대파 | 냄비 |
+| 19 | dishes-1 5행 3열 | 카레라이스 | Korean curry rice | 보통 | 30분 | 밥, 감자, 양파, 카레가루 | 냄비 |
+| 20 | dishes-1 5행 4열 | 짜장덮밥 | jjajang rice bowl | 보통 | 25분 | 밥, 양파, 양배추, 짜장가루 | 프라이팬 |
+| 21 | dishes-2 1행 1열 | 원팬 토마토 파스타 | one-pan tomato pasta | 보통 | 20분 | 파스타면, 토마토소스, 양파 | 프라이팬 |
+| 22 | dishes-2 1행 2열 | 원팬 우유 크림 파스타 | one-pan milk cream pasta | 보통 | 25분 | 파스타면, 우유, 치즈, 베이컨 | 프라이팬 |
+| 23 | dishes-2 1행 3열 | 두부조림 | braised tofu | 보통 | 20분 | 두부, 양파, 대파 | 프라이팬 |
+| 24 | dishes-2 1행 4열 | 감자조림 | braised potatoes | 보통 | 25분 | 감자, 양파 | 냄비 |
+| 25 | dishes-2 2행 1열 | 계란말이 | Korean rolled omelette | 어려움 | 20분 | 계란, 대파, 당근 | 프라이팬 |
+| 26 | dishes-2 2행 2열 | 오므라이스 | omurice | 어려움 | 30분 | 밥, 계란, 양파, 햄 | 프라이팬 |
+| 27 | dishes-2 2행 3열 | 김치전 | kimchi pancake | 어려움 | 25분 | 김치, 부침가루 | 프라이팬 |
+| 28 | dishes-2 2행 4열 | 감자채전 | shredded potato pancake | 어려움 | 25분 | 감자, 감자전분 | 프라이팬 |
+| 29 | dishes-2 3행 1열 | 제육볶음 | spicy stir-fried pork (jeyuk) | 어려움 | 30분 | 돼지고기, 양파, 대파, 마늘 | 프라이팬 |
+| 30 | dishes-2 3행 2열 | 닭볶음탕 | spicy braised chicken (dakbokkeumtang) | 어려움 | 45분 | 닭고기, 감자, 양파, 대파, 마늘 | 냄비 |
 
-## 5. 요리책 — 일본식 30개 (그림판 `food-dishes.webp` 4~6줄)
+## 5. 요리책 — 일본식 30개 (그림판 `dishes-2` 뒤쪽, `dishes-3`)
 
 | # | 그림판 위치 | 요리 | English | 난이도 | 시간 | 주재료 | 도구 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 4행 1열 | 오야코동 | oyakodon | 보통 | 20분 | 밥, 뼈 없는 닭다리살, 계란, 양파 | 프라이팬 |
-| 2 | 4행 2열 | 규동 | gyudon | 보통 | 20분 | 밥, 소고기 불고기용, 양파 | 프라이팬 |
-| 3 | 4행 3열 | 부타동 | butadon | 보통 | 20분 | 밥, 얇게 썬 돼지고기, 양파 | 프라이팬 |
-| 4 | 4행 4열 | 닭고기 소보로동 | chicken soboro don | 보통 | 20분 | 밥, 다진 닭고기, 계란 | 프라이팬 |
-| 5 | 4행 5열 | 치킨 데리야키 덮밥 | teriyaki chicken rice bowl | 보통 | 25분 | 밥, 뼈 없는 닭다리살 | 프라이팬 |
-| 6 | 4행 6열 | 일본식 카레라이스 | Japanese curry rice | 보통 | 35분 | 밥, 돼지고기, 감자, 당근, 양파, 고형 카레 | 냄비 |
-| 7 | 4행 7열 | 하야시라이스 | hayashi rice | 보통 | 30분 | 밥, 소고기 불고기용, 양파, 버섯, 고형 하야시 루 | 냄비 |
-| 8 | 4행 8열 | 일본식 오므라이스 | Japanese omurice | 어려움 | 30분 | 밥, 계란, 뼈 없는 닭다리살, 양파, 버터 | 프라이팬 |
-| 9 | 4행 9열 | 연어 오니기리 | salmon onigiri | 보통 | 20분 | 밥, 연어, 김 | 프라이팬 |
-| 10 | 4행 10열 | 야키오니기리 | yaki onigiri | 쉬움 | 15분 | 밥 | 프라이팬 |
-| 11 | 5행 1열 | 키츠네우동 | kitsune udon | 쉬움 | 10분 | 우동면, 조미 유부, 대파 | 냄비 |
-| 12 | 5행 2열 | 야키우동 | yaki udon | 보통 | 20분 | 우동면, 얇게 썬 돼지고기, 양배추, 당근, 양파 | 프라이팬 |
-| 13 | 5행 3열 | 카레우동 | curry udon | 쉬움 | 15분 | 우동면, 양파, 대파, 고형 카레 | 냄비 |
-| 14 | 5행 4열 | 자루소바 | zaru soba | 쉬움 | 15분 | 건메밀면, 김, 대파 | 냄비 |
-| 15 | 5행 5열 | 야키소바 | yakisoba | 보통 | 20분 | 볶음용 중화면, 얇게 썬 돼지고기, 양배추, 당근, 양파 | 프라이팬 |
-| 16 | 5행 6열 | 나폴리탄 스파게티 | spaghetti Napolitan | 보통 | 25분 | 파스타면, 소시지, 양파, 피망, 버터 | 냄비, 프라이팬 |
-| 17 | 5행 7열 | 버섯 버터간장 파스타 | mushroom butter soy pasta | 보통 | 20분 | 파스타면, 버섯, 마늘, 버터 | 냄비, 프라이팬 |
-| 18 | 5행 8열 | 타마고산도 | tamago sando | 쉬움 | 20분 | 식빵, 계란 | 냄비 |
-| 19 | 5행 9열 | 오코노미야키 | okonomiyaki | 어려움 | 30분 | 양배추, 계란, 베이컨, 밀가루 | 프라이팬 |
-| 20 | 5행 10열 | 타마고야키 | tamagoyaki | 어려움 | 20분 | 계란 | 프라이팬 |
-| 21 | 6행 1열 | 쇼가야키 | pork shogayaki | 보통 | 20분 | 얇게 썬 돼지고기, 양파, 생강 | 프라이팬 |
-| 22 | 6행 2열 | 치킨 데리야키 | chicken teriyaki | 보통 | 25분 | 뼈 없는 닭다리살 | 프라이팬 |
-| 23 | 6행 3열 | 연어 데리야키 | salmon teriyaki | 보통 | 20분 | 연어 | 프라이팬 |
-| 24 | 6행 4열 | 일본식 함박스테이크 | Japanese hamburg steak | 어려움 | 35분 | 다진 소고기, 다진 돼지고기, 양파, 빵가루, 우유, 계란 | 프라이팬 |
-| 25 | 6행 5열 | 니쿠자가 | nikujaga | 보통 | 35분 | 소고기 불고기용, 감자, 당근, 양파 | 냄비 |
-| 26 | 6행 6열 | 두부 미소국 | tofu miso soup | 쉬움 | 10분 | 두부, 건미역, 대파 | 냄비 |
-| 27 | 6행 7열 | 돈지루 | tonjiru (pork miso soup) | 보통 | 25분 | 얇게 썬 돼지고기, 무, 당근, 감자, 대파 | 냄비 |
-| 28 | 6행 8열 | 닭고기계란 조스이 | chicken and egg zosui | 쉬움 | 20분 | 밥, 뼈 없는 닭다리살, 계란, 대파 | 냄비 |
-| 29 | 6행 9열 | 히야얏코 | hiyayakko (chilled tofu) | 쉬움 | 5분 | 연두부, 대파, 생강 | 가열 없이 |
-| 30 | 6행 10열 | 시금치 참깨무침 | spinach goma-ae | 쉬움 | 10분 | 시금치 | 냄비 |
+| 1 | dishes-2 3행 3열 | 오야코동 | oyakodon | 보통 | 20분 | 밥, 뼈 없는 닭다리살, 계란, 양파 | 프라이팬 |
+| 2 | dishes-2 3행 4열 | 규동 | gyudon | 보통 | 20분 | 밥, 소고기 불고기용, 양파 | 프라이팬 |
+| 3 | dishes-2 4행 1열 | 부타동 | butadon | 보통 | 20분 | 밥, 얇게 썬 돼지고기, 양파 | 프라이팬 |
+| 4 | dishes-2 4행 2열 | 닭고기 소보로동 | chicken soboro don | 보통 | 20분 | 밥, 다진 닭고기, 계란 | 프라이팬 |
+| 5 | dishes-2 4행 3열 | 치킨 데리야키 덮밥 | teriyaki chicken rice bowl | 보통 | 25분 | 밥, 뼈 없는 닭다리살 | 프라이팬 |
+| 6 | dishes-2 4행 4열 | 일본식 카레라이스 | Japanese curry rice | 보통 | 35분 | 밥, 돼지고기, 감자, 당근, 양파, 고형 카레 | 냄비 |
+| 7 | dishes-2 5행 1열 | 하야시라이스 | hayashi rice | 보통 | 30분 | 밥, 소고기 불고기용, 양파, 버섯, 고형 하야시 루 | 냄비 |
+| 8 | dishes-2 5행 2열 | 일본식 오므라이스 | Japanese omurice | 어려움 | 30분 | 밥, 계란, 뼈 없는 닭다리살, 양파, 버터 | 프라이팬 |
+| 9 | dishes-2 5행 3열 | 연어 오니기리 | salmon onigiri | 보통 | 20분 | 밥, 연어, 김 | 프라이팬 |
+| 10 | dishes-2 5행 4열 | 야키오니기리 | yaki onigiri | 쉬움 | 15분 | 밥 | 프라이팬 |
+| 11 | dishes-3 1행 1열 | 키츠네우동 | kitsune udon | 쉬움 | 10분 | 우동면, 조미 유부, 대파 | 냄비 |
+| 12 | dishes-3 1행 2열 | 야키우동 | yaki udon | 보통 | 20분 | 우동면, 얇게 썬 돼지고기, 양배추, 당근, 양파 | 프라이팬 |
+| 13 | dishes-3 1행 3열 | 카레우동 | curry udon | 쉬움 | 15분 | 우동면, 양파, 대파, 고형 카레 | 냄비 |
+| 14 | dishes-3 1행 4열 | 자루소바 | zaru soba | 쉬움 | 15분 | 건메밀면, 김, 대파 | 냄비 |
+| 15 | dishes-3 2행 1열 | 야키소바 | yakisoba | 보통 | 20분 | 볶음용 중화면, 얇게 썬 돼지고기, 양배추, 당근, 양파 | 프라이팬 |
+| 16 | dishes-3 2행 2열 | 나폴리탄 스파게티 | spaghetti Napolitan | 보통 | 25분 | 파스타면, 소시지, 양파, 피망, 버터 | 냄비, 프라이팬 |
+| 17 | dishes-3 2행 3열 | 버섯 버터간장 파스타 | mushroom butter soy pasta | 보통 | 20분 | 파스타면, 버섯, 마늘, 버터 | 냄비, 프라이팬 |
+| 18 | dishes-3 2행 4열 | 타마고산도 | tamago sando | 쉬움 | 20분 | 식빵, 계란 | 냄비 |
+| 19 | dishes-3 3행 1열 | 오코노미야키 | okonomiyaki | 어려움 | 30분 | 양배추, 계란, 베이컨, 밀가루 | 프라이팬 |
+| 20 | dishes-3 3행 2열 | 타마고야키 | tamagoyaki | 어려움 | 20분 | 계란 | 프라이팬 |
+| 21 | dishes-3 3행 3열 | 쇼가야키 | pork shogayaki | 보통 | 20분 | 얇게 썬 돼지고기, 양파, 생강 | 프라이팬 |
+| 22 | dishes-3 3행 4열 | 치킨 데리야키 | chicken teriyaki | 보통 | 25분 | 뼈 없는 닭다리살 | 프라이팬 |
+| 23 | dishes-3 4행 1열 | 연어 데리야키 | salmon teriyaki | 보통 | 20분 | 연어 | 프라이팬 |
+| 24 | dishes-3 4행 2열 | 일본식 함박스테이크 | Japanese hamburg steak | 어려움 | 35분 | 다진 소고기, 다진 돼지고기, 양파, 빵가루, 우유, 계란 | 프라이팬 |
+| 25 | dishes-3 4행 3열 | 니쿠자가 | nikujaga | 보통 | 35분 | 소고기 불고기용, 감자, 당근, 양파 | 냄비 |
+| 26 | dishes-3 4행 4열 | 두부 미소국 | tofu miso soup | 쉬움 | 10분 | 두부, 건미역, 대파 | 냄비 |
+| 27 | dishes-3 5행 1열 | 돈지루 | tonjiru (pork miso soup) | 보통 | 25분 | 얇게 썬 돼지고기, 무, 당근, 감자, 대파 | 냄비 |
+| 28 | dishes-3 5행 2열 | 닭고기계란 조스이 | chicken and egg zosui | 쉬움 | 20분 | 밥, 뼈 없는 닭다리살, 계란, 대파 | 냄비 |
+| 29 | dishes-3 5행 3열 | 히야얏코 | hiyayakko (chilled tofu) | 쉬움 | 5분 | 연두부, 대파, 생강 | 가열 없이 |
+| 30 | dishes-3 5행 4열 | 시금치 참깨무침 | spinach goma-ae | 쉬움 | 10분 | 시금치 | 냄비 |
 
 ## 6. 그림판 순서용 영어 목록 (프롬프트에 붙여 넣기)
 
