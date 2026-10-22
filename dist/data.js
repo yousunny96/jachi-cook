@@ -18,7 +18,8 @@
     ['curry-powder','카레가루','곡물·기타','🍛',['카레']], ['jjajang-powder','짜장가루','곡물·기타','🥣',['짜장']],
     ['pancake-mix','부침가루','곡물·기타','🌾',[]], ['starch','감자전분','곡물·기타','🌾',['전분']]
   ].map(([id,name,category,emoji,aliases])=>({id,name,category,emoji,aliases}));
-  const tools=[['pan','프라이팬','pan'],['pot','냄비','pot'],['microwave','전자레인지','microwave'],['oven','오븐','oven'],['air-fryer','에어프라이어','air'],['rice-cooker','전기밥솥','cooker']].map(([id,name,icon])=>({id,name,icon}));
+  // sprite: assets/tools.webp(1536×1024)에서 잘라 쓸 [x,y,w,h]
+  const tools=[['pan','프라이팬','pan',[70,135,450,342]],['pot','냄비','pot',[551,149,432,316]],['microwave','전자레인지','microwave',[1036,147,448,330]],['oven','오븐','oven',[69,591,442,329]],['air-fryer','에어프라이어','air',[597,557,350,373]],['rice-cooker','전기밥솥','cooker',[1090,572,372,355]]].map(([id,name,icon,sprite])=>({id,name,icon,sprite}));
   const condiments=[['salt','소금'],['oil','식용유'],['soy','간장'],['sugar','설탕'],['pepper-powder','후추'],['sesame-oil','참기름'],['gochujang','고추장'],['doenjang','된장'],['chili-powder','고춧가루'],['vinegar','식초'],['ketchup','케첩'],['mayonnaise','마요네즈']].map(([id,name])=>({id,name}));
   // 일본 가정식 30개(data-japanese.js): 없는 재료·양념만 추가하고, 레시피는 기존 30개 뒤에 붙인다.
   const JP=typeof module==='object'&&module.exports?require('./data-japanese.js'):root.SobokJapanese;
