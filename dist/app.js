@@ -54,8 +54,8 @@
   function header(){
     const sub=!['home','welcome'].includes(page);
     // 레시피 상세는 로고 대신 '뒤로가기' 글자 버튼
-    // 아래 메뉴 화면(내 집·냉장고·요리책·내 주방)은 머리글에 언어 버튼만 둔다. 처음 설정 중에는 뒤로가기를 남긴다.
-    if(['home','fridge','recipes','kitchen'].includes(page)&&!onboarding&&state.onboardingComplete)return `<header class="app-header"><div class="header-start"></div>${langSwitch()}</header>`;
+    // 아래 메뉴 화면(냉장고·요리책·내 주방)은 머리글에 언어 버튼만 둔다. 내 집은 앱 이름을 남기고, 처음 설정 중에는 뒤로가기를 남긴다.
+    if(['fridge','recipes','kitchen'].includes(page)&&!onboarding&&state.onboardingComplete)return `<header class="app-header"><div class="header-start"></div>${langSwitch()}</header>`;
     const start=page==='detail'?`<button class="back-link" data-action="back">${icon('back')}<span>${t('뒤로가기')}</span></button>`:null;
     return `<header class="app-header"><div class="header-start">${start??`${sub?`<button class="icon-button" data-action="back" aria-label="${t('이전 화면')}">${icon('back')}</button>`:''}<button class="brand" data-action="home" aria-label="${t('소복 홈')}">${t('소복')}</button>`}</div>${langSwitch()}</header>`;
   }
