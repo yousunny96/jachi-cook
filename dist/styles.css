@@ -288,3 +288,4 @@
 .lang-option.active{background:#fffaf3;color:#4d2c20;box-shadow:0 1px 3px #6d482122}
 html:lang(ja) *{word-break:normal!important;line-break:strict}
 :root:lang(ja),:lang(ja) .wheel-disc text{font-family:'Sobok Jua','Hiragino Maru Gothic ProN','Hiragino Sans','Yu Gothic UI','Yu Gothic','Noto Sans JP',ui-rounded,system-ui,sans-serif}
+.title-count{color:var(--coral-dark);margin-left:4px;white-space:nowrap}
