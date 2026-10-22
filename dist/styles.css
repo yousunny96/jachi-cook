@@ -287,5 +287,6 @@
 .lang-option{min-height:36px;min-width:52px;padding:6px 9px;border-radius:11px;background:none;font-size:12px;font-weight:700;color:#7c5e49}
 .lang-option.active{background:#fffaf3;color:#4d2c20;box-shadow:0 1px 3px #6d482122}
 html:lang(ja) *{word-break:normal!important;line-break:strict}
-:root:lang(ja),:lang(ja) .wheel-disc text{font-family:'Sobok Jua','Hiragino Maru Gothic ProN','Hiragino Sans','Yu Gothic UI','Yu Gothic','Noto Sans JP',ui-rounded,system-ui,sans-serif}
+/* 일본어: 둥근 글꼴(M PLUS Rounded 1c, Google Fonts). 한글은 Jua로, 못 불러오면 맥의 둥근 고딕 → 기본 글꼴 */
+:root:lang(ja),:lang(ja) .wheel-disc text,.lang-option[lang=ja]{font-family:'M PLUS Rounded 1c','Sobok Jua','Hiragino Maru Gothic ProN','Hiragino Sans','Yu Gothic UI','Yu Gothic','Noto Sans JP',ui-rounded,system-ui,sans-serif}
 .title-count{color:var(--coral-dark);margin-left:4px;white-space:nowrap}
