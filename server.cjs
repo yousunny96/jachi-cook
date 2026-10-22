@@ -102,7 +102,7 @@ function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMI
     if(requests.length>=5||daily.length>=30)return json(429,{error:'Local generation limit'});
     requests.push(now());daily.push(now());
     const catalog=D.ingredients.map(x=>({id:x.id,name:x.name}));
-    const prompt='사용자가 냉장고 재료라고 적은 한국어 단어들이 아래 식재료 목록의 어느 항목인지 고르세요. 목록에 확실히 대응하는 것만 고르고, 애매하거나 목록에 없으면 고르지 마세요. 비슷한 다른 재료로 바꾸지 마세요(예: 닭고기와 닭다리살은 다름). JSON 형식: {"matches":[{"word":"입력 단어","id":"목록의 id"}]}. 마크다운 금지. 단어: '+JSON.stringify(words)+' 목록: '+JSON.stringify(catalog);
+    const prompt='사용자가 냉장고 재료라고 적은 한국어 또는 일본어 단어들이 아래 식재료 목록의 어느 항목인지 고르세요. 목록에 확실히 대응하는 것만 고르고, 애매하거나 목록에 없으면 고르지 마세요. 비슷한 다른 재료로 바꾸지 마세요(예: 닭고기와 닭다리살은 다름). JSON 형식: {"matches":[{"word":"입력 단어","id":"목록의 id"}]}. 마크다운 금지. 단어: '+JSON.stringify(words)+' 목록: '+JSON.stringify(catalog);
     const response=await fetchImpl('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',temperature:0,maxOutputTokens:800}}),signal:AbortSignal.timeout(15000)});
     if(!response.ok)throw Error('Provider unavailable');
     const payload=await response.json(),candidate=payload.candidates?.[0];if(candidate?.finishReason!=='STOP')throw Error('Incomplete');

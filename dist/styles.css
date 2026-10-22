@@ -283,3 +283,10 @@
 .back-link:hover{background:#f3e8d9}
 .feedback-options{display:grid;gap:8px}
 .feedback-comment{width:100%;border:1px solid #e3cfb6;border-radius:14px;background:#fff;padding:12px 14px;font:inherit;font-size:13px;line-height:1.6;color:var(--ink);resize:none}
+.lang-switch{display:flex;gap:2px;padding:3px;border-radius:14px;background:#f3e8d9;border:1px solid #e7d5bf;flex-shrink:0}
+.lang-option{min-height:36px;min-width:52px;padding:6px 9px;border-radius:11px;background:none;font-size:12px;font-weight:700;color:#7c5e49}
+.lang-option.active{background:#fffaf3;color:#4d2c20;box-shadow:0 1px 3px #6d482122}
+.hud-settings{background:#fffaf0;border:2px solid #5b3a2b;box-shadow:0 3px 0 #5b3a2b;border-radius:12px;width:42px;height:42px}
+.hud-settings .icon{width:22px;height:22px}
+html:lang(ja) *{word-break:normal!important;line-break:strict}
+:root:lang(ja),:lang(ja) .wheel-disc text{font-family:'Sobok Jua','Hiragino Maru Gothic ProN','Hiragino Sans','Yu Gothic UI','Yu Gothic','Noto Sans JP',ui-rounded,system-ui,sans-serif}

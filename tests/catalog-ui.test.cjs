@@ -2,10 +2,10 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const D=require('../dist/data.js');
 function appWith(state){
  const app={innerHTML:''},handlers={};
- const window={localStorage:{getItem:()=>JSON.stringify(state),setItem(){}},addEventListener(){},scrollTo(){}};
+ const window={localStorage:{getItem:k=>k==='sobok.lang'?'ko':JSON.stringify(state),setItem(){}},addEventListener(){},scrollTo(){}};
  const document={querySelector:s=>s==='#app'?app:null,addEventListener:(type,fn)=>handlers[type]=fn};
  const ctx=vm.createContext({window,document,history:{replaceState(){},pushState(){}},setTimeout,clearTimeout,console});
- for(const name of ['recipe-drafts','data-japanese','data','model','app'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../dist',name+'.js'),'utf8'),ctx);
+ for(const name of ['recipe-drafts','data-japanese','data','i18n/ja-ui','i18n/ja-catalog','i18n/ja-recipes','i18n','model','app'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../dist',name+'.js'),'utf8'),ctx);
  return {html:()=>app.innerHTML,click:(action,id)=>handlers.click({target:{closest:()=>({dataset:{action,id},disabled:false})}})};
 }
 const state={version:1,onboardingComplete:true,selectedCharacter:'hachiware',ingredients:D.ingredients.map(x=>x.id),tools:D.tools.map(x=>x.id),condiments:D.condiments.map(x=>x.id)};
