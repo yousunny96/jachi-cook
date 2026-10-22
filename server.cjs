@@ -26,9 +26,28 @@ function validateFeedback(d){
  const comment=(d.comment||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim();
  return {answer:d.answer,trigger:d.trigger,...(d.liked?{liked:d.liked}:{}),...(comment?{comment}:{}),...(d.character?{character:d.character}:{})};
 }
-function createServer({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now,feedbackFile=process.env.FEEDBACK_FILE||path.join(__dirname,'data','feedback.jsonl')}={}){
- const cache=new Map(),inflight=new Map();let requests=[],daily=[],feedbackTimes=[];
- return http.createServer(async(req,res)=>{
+// 의견 저장소: Upstash Redis(Vercel 배포) 환경 변수가 있으면 Redis, 없으면 로컬 파일. 둘 다 분당 30건까지만 받는다.
+function fileFeedbackStore(file,now){let times=[];return{
+ async allow(){times=times.filter(t=>now()-t<60000);if(times.length>=30)return false;times.push(now());return true;},
+ async append(entry){await fs.mkdir(path.dirname(file),{recursive:true});await fs.appendFile(file,JSON.stringify(entry)+'\n');},
+ async list(){try{return (await fs.readFile(file,'utf8')).split('\n').filter(Boolean).map(l=>JSON.parse(l));}catch(e){if(e.code==='ENOENT')return [];throw e;}}
+};}
+function redisFeedbackStore(url,token,now,fetchImpl=fetch){
+ const run=async commands=>{const r=await fetchImpl(url.replace(/\/$/,'')+'/pipeline',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(commands),signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('Feedback store unavailable');const out=await r.json();if(out.some(x=>x.error))throw Error('Feedback store error');return out.map(x=>x.result);};
+ return{
+  async allow(){const key='sobok:feedback:rate:'+Math.floor(now()/60000);const [count]=await run([['INCR',key],['EXPIRE',key,'120']]);return count<=30;},
+  async append(entry){await run([['RPUSH','sobok:feedback',JSON.stringify(entry)]]);},
+  async list(){const [rows]=await run([['LRANGE','sobok:feedback','0','-1']]);return rows.map(l=>JSON.parse(l));}
+ };
+}
+function defaultFeedbackStore(env=process.env,now=Date.now){
+ const url=env.UPSTASH_REDIS_REST_URL||env.KV_REST_API_URL,token=env.UPSTASH_REDIS_REST_TOKEN||env.KV_REST_API_TOKEN;
+ return url&&token?redisFeedbackStore(url,token,now):fileFeedbackStore(env.FEEDBACK_FILE||path.join(__dirname,'data','feedback.jsonl'),now);
+}
+// 요청 처리기 하나를 로컬 서버(createServer)와 Vercel 함수(api/*.js)가 같이 쓴다.
+function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now,feedbackStore=defaultFeedbackStore(process.env,now)}={}){
+ const cache=new Map(),inflight=new Map();let requests=[],daily=[];
+ return async(req,res)=>{
   const json=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   try{
    const url=new URL(req.url,'http://localhost');
@@ -40,9 +59,8 @@ function createServer({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMIN
     if(!String(req.headers['content-type']).startsWith('application/json'))return json(415,{error:'JSON required'});
     let body='';for await(const chunk of req){body+=chunk;if(body.length>2048)return json(413,{error:'Request too large'});}
     let entry;try{entry=validateFeedback(JSON.parse(body));}catch{return json(400,{error:'Invalid feedback'});}
-    feedbackTimes=feedbackTimes.filter(t=>now()-t<60000);if(feedbackTimes.length>=30)return json(429,{error:'Too many feedback requests'});feedbackTimes.push(now());
-    await fs.mkdir(path.dirname(feedbackFile),{recursive:true});
-    await fs.appendFile(feedbackFile,JSON.stringify({at:new Date(now()).toISOString(),...entry})+'\n');
+    if(!(await feedbackStore.allow()))return json(429,{error:'Too many feedback requests'});
+    await feedbackStore.append({at:new Date(now()).toISOString(),...entry});
     return json(200,{ok:true});
    }
    if(url.pathname==='/api/recipe'){
@@ -96,8 +114,9 @@ function createServer({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMIN
    if(!file.startsWith(ROOT+path.sep))return json(403,{error:'Forbidden'});
    const data=await fs.readFile(file);res.writeHead(200,{'Content-Type':({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf','.json':'application/json'})[path.extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff'});res.end(req.method==='HEAD'?undefined:data);
   }catch(error){if(!res.headersSent)json(error.code==='ENOENT'?404:502,{error:'Unable to complete request'});else res.end();}
- });
+ };
 }
+function createServer(options){return http.createServer(createHandler(options));}
 // 다른 사람이 접속하게 하려면 HOST=0.0.0.0 으로 실행한다.
 if(require.main===module){const host=process.env.HOST||'127.0.0.1',port=Number(process.env.PORT)||4173;createServer().listen(port,host,()=>console.log(`Local: http://${host}:${port}`));}
-module.exports={createServer,validate,validateIngredientMatches,validateFeedback};
+module.exports={createServer,createHandler,defaultFeedbackStore,fileFeedbackStore,redisFeedbackStore,validate,validateIngredientMatches,validateFeedback};
