@@ -15,12 +15,36 @@ function validateIngredientMatches(d,words){
  for(const m of d.matches){if(!m||typeof m.word!=='string'||typeof m.id!=='string')throw Error('Invalid ingredient response');if(asked.has(m.word.trim())&&ids.has(m.id)&&!out.some(o=>o.id===m.id))out.push({word:m.word.trim(),id:m.id});}
  return {matches:out,source:'gemini'};
 }
-function createServer({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now}={}){
- const cache=new Map(),inflight=new Map();let requests=[],daily=[];
+// 의견: 정해진 값만 받아 한 줄 JSON으로 쌓는다. IP·기기 정보는 남기지 않는다.
+const FEEDBACK_ANSWERS=['yes','unsure','dismissed'],FEEDBACK_LIKED=['kitchen','fridge','random','recipe'],FEEDBACK_TRIGGERS=['auto','settings'];
+function validateFeedback(d){
+ if(!d||typeof d!=='object'||Array.isArray(d)||Object.keys(d).some(k=>!['answer','liked','comment','trigger','character'].includes(k)))throw Error('Invalid feedback');
+ if(!FEEDBACK_ANSWERS.includes(d.answer)||!FEEDBACK_TRIGGERS.includes(d.trigger))throw Error('Invalid feedback');
+ if(d.liked!==undefined&&!FEEDBACK_LIKED.includes(d.liked))throw Error('Invalid feedback');
+ if(d.character!==undefined&&!D.characters.some(c=>c.id===d.character))throw Error('Invalid feedback');
+ if(d.comment!==undefined&&(typeof d.comment!=='string'||d.comment.length>300))throw Error('Invalid feedback');
+ const comment=(d.comment||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim();
+ return {answer:d.answer,trigger:d.trigger,...(d.liked?{liked:d.liked}:{}),...(comment?{comment}:{}),...(d.character?{character:d.character}:{})};
+}
+function createServer({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now,feedbackFile=process.env.FEEDBACK_FILE||path.join(__dirname,'data','feedback.jsonl')}={}){
+ const cache=new Map(),inflight=new Map();let requests=[],daily=[],feedbackTimes=[];
  return http.createServer(async(req,res)=>{
   const json=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   try{
    const url=new URL(req.url,'http://localhost');
+   if(url.pathname==='/api/feedback'){
+    // GET은 앱이 '의견을 받을 수 있는 서버인지'만 확인한다. 쌓인 의견은 내려주지 않는다.
+    if(req.method==='GET')return json(200,{ok:true});
+    if(req.method!=='POST')return json(405,{error:'POST required'});
+    const origin=req.headers.origin;if(origin&&origin!==`http://${req.headers.host}`&&origin!==`https://${req.headers.host}`)return json(403,{error:'Origin rejected'});
+    if(!String(req.headers['content-type']).startsWith('application/json'))return json(415,{error:'JSON required'});
+    let body='';for await(const chunk of req){body+=chunk;if(body.length>2048)return json(413,{error:'Request too large'});}
+    let entry;try{entry=validateFeedback(JSON.parse(body));}catch{return json(400,{error:'Invalid feedback'});}
+    feedbackTimes=feedbackTimes.filter(t=>now()-t<60000);if(feedbackTimes.length>=30)return json(429,{error:'Too many feedback requests'});feedbackTimes.push(now());
+    await fs.mkdir(path.dirname(feedbackFile),{recursive:true});
+    await fs.appendFile(feedbackFile,JSON.stringify({at:new Date(now()).toISOString(),...entry})+'\n');
+    return json(200,{ok:true});
+   }
    if(url.pathname==='/api/recipe'){
     if(req.method!=='POST')return json(405,{error:'POST required'});
     const origin=req.headers.origin;if(origin&&origin!==`http://${req.headers.host}`&&origin!==`https://${req.headers.host}`)return json(403,{error:'Origin rejected'});
@@ -74,5 +98,6 @@ function createServer({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMIN
   }catch(error){if(!res.headersSent)json(error.code==='ENOENT'?404:502,{error:'Unable to complete request'});else res.end();}
  });
 }
-if(require.main===module)createServer().listen(Number(process.env.PORT)||4173,'127.0.0.1',()=>console.log('Local: http://127.0.0.1:'+(Number(process.env.PORT)||4173)));
-module.exports={createServer,validate,validateIngredientMatches};
+// 다른 사람이 접속하게 하려면 HOST=0.0.0.0 으로 실행한다.
+if(require.main===module){const host=process.env.HOST||'127.0.0.1',port=Number(process.env.PORT)||4173;createServer().listen(port,host,()=>console.log(`Local: http://${host}:${port}`));}
+module.exports={createServer,validate,validateIngredientMatches,validateFeedback};

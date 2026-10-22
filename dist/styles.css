@@ -281,3 +281,5 @@
 .back-link{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 10px 0 2px;margin-left:-6px;background:none;border-radius:12px;font-size:17px;font-weight:800;color:#4d2c20}
 .back-link .icon{width:24px;height:24px}
 .back-link:hover{background:#f3e8d9}
+.feedback-options{display:grid;gap:8px}
+.feedback-comment{width:100%;border:1px solid #e3cfb6;border-radius:14px;background:#fff;padding:12px 14px;font:inherit;font-size:13px;line-height:1.6;color:var(--ink);resize:none}
