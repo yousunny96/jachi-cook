@@ -297,3 +297,5 @@ body{font-family:inherit}
 @media(max-width:359px){:lang(ja) .dock-action strong{font-size:11px}}
 /* 아래 메뉴가 없는 화면(처음 설정 중)에서는 하단 버튼을 화면 맨 아래에 붙인다 */
 .no-bottom .sticky-action{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+/* 검색창 바로 아래 보조 문구 */
+.search-box+.search-hint{margin:-8px 4px 14px}
