@@ -15,12 +15,54 @@ function validateIngredientMatches(d,words){
  for(const m of d.matches){if(!m||typeof m.word!=='string'||typeof m.id!=='string')throw Error('Invalid ingredient response');if(asked.has(m.word.trim())&&ids.has(m.id)&&!out.some(o=>o.id===m.id))out.push({word:m.word.trim(),id:m.id});}
  return {matches:out,source:'gemini'};
 }
-function createServer({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now}={}){
+// 의견: 정해진 값만 받아 한 줄 JSON으로 쌓는다. IP·기기 정보는 남기지 않는다.
+const FEEDBACK_ANSWERS=['yes','unsure','dismissed'],FEEDBACK_LIKED=['kitchen','fridge','random','recipe'],FEEDBACK_TRIGGERS=['auto','settings'];
+function validateFeedback(d){
+ if(!d||typeof d!=='object'||Array.isArray(d)||Object.keys(d).some(k=>!['answer','liked','comment','trigger','character'].includes(k)))throw Error('Invalid feedback');
+ if(!FEEDBACK_ANSWERS.includes(d.answer)||!FEEDBACK_TRIGGERS.includes(d.trigger))throw Error('Invalid feedback');
+ if(d.liked!==undefined&&!FEEDBACK_LIKED.includes(d.liked))throw Error('Invalid feedback');
+ if(d.character!==undefined&&!D.characters.some(c=>c.id===d.character))throw Error('Invalid feedback');
+ if(d.comment!==undefined&&(typeof d.comment!=='string'||d.comment.length>300))throw Error('Invalid feedback');
+ const comment=(d.comment||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim();
+ return {answer:d.answer,trigger:d.trigger,...(d.liked?{liked:d.liked}:{}),...(comment?{comment}:{}),...(d.character?{character:d.character}:{})};
+}
+// 의견 저장소: Upstash Redis(Vercel 배포) 환경 변수가 있으면 Redis, 없으면 로컬 파일. 둘 다 분당 30건까지만 받는다.
+function fileFeedbackStore(file,now){let times=[];return{
+ async allow(){times=times.filter(t=>now()-t<60000);if(times.length>=30)return false;times.push(now());return true;},
+ async append(entry){await fs.mkdir(path.dirname(file),{recursive:true});await fs.appendFile(file,JSON.stringify(entry)+'\n');},
+ async list(){try{return (await fs.readFile(file,'utf8')).split('\n').filter(Boolean).map(l=>JSON.parse(l));}catch(e){if(e.code==='ENOENT')return [];throw e;}}
+};}
+function redisFeedbackStore(url,token,now,fetchImpl=fetch){
+ const run=async commands=>{const r=await fetchImpl(url.replace(/\/$/,'')+'/pipeline',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(commands),signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('Feedback store unavailable');const out=await r.json();if(out.some(x=>x.error))throw Error('Feedback store error');return out.map(x=>x.result);};
+ return{
+  async allow(){const key='sobok:feedback:rate:'+Math.floor(now()/60000);const [count]=await run([['INCR',key],['EXPIRE',key,'120']]);return count<=30;},
+  async append(entry){await run([['RPUSH','sobok:feedback',JSON.stringify(entry)]]);},
+  async list(){const [rows]=await run([['LRANGE','sobok:feedback','0','-1']]);return rows.map(l=>JSON.parse(l));}
+ };
+}
+function defaultFeedbackStore(env=process.env,now=Date.now){
+ const url=env.UPSTASH_REDIS_REST_URL||env.KV_REST_API_URL,token=env.UPSTASH_REDIS_REST_TOKEN||env.KV_REST_API_TOKEN;
+ return url&&token?redisFeedbackStore(url,token,now):fileFeedbackStore(env.FEEDBACK_FILE||path.join(__dirname,'data','feedback.jsonl'),now);
+}
+// 요청 처리기 하나를 로컬 서버(createServer)와 Vercel 함수(api/*.js)가 같이 쓴다.
+function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now,feedbackStore=defaultFeedbackStore(process.env,now)}={}){
  const cache=new Map(),inflight=new Map();let requests=[],daily=[];
- return http.createServer(async(req,res)=>{
+ return async(req,res)=>{
   const json=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   try{
    const url=new URL(req.url,'http://localhost');
+   if(url.pathname==='/api/feedback'){
+    // GET은 앱이 '의견을 받을 수 있는 서버인지'만 확인한다. 쌓인 의견은 내려주지 않는다.
+    if(req.method==='GET')return json(200,{ok:true});
+    if(req.method!=='POST')return json(405,{error:'POST required'});
+    const origin=req.headers.origin;if(origin&&origin!==`http://${req.headers.host}`&&origin!==`https://${req.headers.host}`)return json(403,{error:'Origin rejected'});
+    if(!String(req.headers['content-type']).startsWith('application/json'))return json(415,{error:'JSON required'});
+    let body='';for await(const chunk of req){body+=chunk;if(body.length>2048)return json(413,{error:'Request too large'});}
+    let entry;try{entry=validateFeedback(JSON.parse(body));}catch{return json(400,{error:'Invalid feedback'});}
+    if(!(await feedbackStore.allow()))return json(429,{error:'Too many feedback requests'});
+    await feedbackStore.append({at:new Date(now()).toISOString(),...entry});
+    return json(200,{ok:true});
+   }
    if(url.pathname==='/api/recipe'){
     if(req.method!=='POST')return json(405,{error:'POST required'});
     const origin=req.headers.origin;if(origin&&origin!==`http://${req.headers.host}`&&origin!==`https://${req.headers.host}`)return json(403,{error:'Origin rejected'});
@@ -60,7 +102,7 @@ function createServer({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMIN
     if(requests.length>=5||daily.length>=30)return json(429,{error:'Local generation limit'});
     requests.push(now());daily.push(now());
     const catalog=D.ingredients.map(x=>({id:x.id,name:x.name}));
-    const prompt='사용자가 냉장고 재료라고 적은 한국어 단어들이 아래 식재료 목록의 어느 항목인지 고르세요. 목록에 확실히 대응하는 것만 고르고, 애매하거나 목록에 없으면 고르지 마세요. 비슷한 다른 재료로 바꾸지 마세요(예: 닭고기와 닭다리살은 다름). JSON 형식: {"matches":[{"word":"입력 단어","id":"목록의 id"}]}. 마크다운 금지. 단어: '+JSON.stringify(words)+' 목록: '+JSON.stringify(catalog);
+    const prompt='사용자가 냉장고 재료라고 적은 한국어 또는 일본어 단어들이 아래 식재료 목록의 어느 항목인지 고르세요. 목록에 확실히 대응하는 것만 고르고, 애매하거나 목록에 없으면 고르지 마세요. 비슷한 다른 재료로 바꾸지 마세요(예: 닭고기와 닭다리살은 다름). JSON 형식: {"matches":[{"word":"입력 단어","id":"목록의 id"}]}. 마크다운 금지. 단어: '+JSON.stringify(words)+' 목록: '+JSON.stringify(catalog);
     const response=await fetchImpl('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',temperature:0,maxOutputTokens:800}}),signal:AbortSignal.timeout(15000)});
     if(!response.ok)throw Error('Provider unavailable');
     const payload=await response.json(),candidate=payload.candidates?.[0];if(candidate?.finishReason!=='STOP')throw Error('Incomplete');
@@ -72,7 +114,9 @@ function createServer({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMIN
    if(!file.startsWith(ROOT+path.sep))return json(403,{error:'Forbidden'});
    const data=await fs.readFile(file);res.writeHead(200,{'Content-Type':({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf','.json':'application/json'})[path.extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff'});res.end(req.method==='HEAD'?undefined:data);
   }catch(error){if(!res.headersSent)json(error.code==='ENOENT'?404:502,{error:'Unable to complete request'});else res.end();}
- });
+ };
 }
-if(require.main===module)createServer().listen(Number(process.env.PORT)||4173,'127.0.0.1',()=>console.log('Local: http://127.0.0.1:'+(Number(process.env.PORT)||4173)));
-module.exports={createServer,validate,validateIngredientMatches};
+function createServer(options){return http.createServer(createHandler(options));}
+// 다른 사람이 접속하게 하려면 HOST=0.0.0.0 으로 실행한다.
+if(require.main===module){const host=process.env.HOST||'127.0.0.1',port=Number(process.env.PORT)||4173;createServer().listen(port,host,()=>console.log(`Local: http://${host}:${port}`));}
+module.exports={createServer,createHandler,defaultFeedbackStore,fileFeedbackStore,redisFeedbackStore,validate,validateIngredientMatches,validateFeedback};

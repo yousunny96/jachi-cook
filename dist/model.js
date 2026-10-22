@@ -21,7 +21,8 @@
   }
   // 여러 재료를 한 번에 적은 글("계란 2개, 대파랑 양파\n두부 한 모")에서 재료 ID를 찾는다.
   // 수량·단위·조사를 지우고, 이름·별칭 중 가장 긴 것부터 맞춘다. 양념은 따로 돌려준다(내 주방에서 담는 것).
-  const UNITS='개|알|판|단|봉지|봉|팩|모|장|쪽|줄기|줄|덩이|덩어리|컵|근|마리|통|캔|병|인분|큰술|작은술|숟가락|g|kg|ml|l|그램|킬로';
+  // 일본어 단위(個·本·枚…)도 함께 지운다.
+  const UNITS='개|알|판|단|봉지|봉|팩|모|장|쪽|줄기|줄|덩이|덩어리|컵|근|마리|통|캔|병|인분|큰술|작은술|숟가락|g|kg|ml|l|그램|킬로|個|コ|本|枚|パック|袋|丁|玉|缶|切れ|束|株|房|かけ|片|杯|人分|グラム';
   const NUM_WORDS='한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|반|몇';
   function parseIngredientText(text) {
     const dict=[];
@@ -34,7 +35,7 @@
       .replace(new RegExp(`\\d+(?:[.,]\\d+)?\\s*(?:${UNITS})?`,'g'),' ')
       .replace(new RegExp(`(?:^|\\s)(?:${NUM_WORDS})\\s*(?:${UNITS})`,'g'),' ');
     const chunks=cleaned.split(/[,，、\/·;|\n\r\t+&]|\s(?:그리고|및|또)\s|이랑|하고|랑/).map(c=>c.trim()).filter(Boolean);
-    const PARTICLE=/^(?:이랑|랑|하고|과|와|도|은|는|이|가|을|를|만|좀|조금|약간|정도|있어|있음|남음|남았어|있어요|요)+$/;
+    const PARTICLE=/^(?:이랑|랑|하고|과|와|도|은|는|이|가|을|를|만|좀|조금|약간|정도|있어|있음|남음|남았어|있어요|요|と|や|も|が|を|は|に|の|少し|少々|ちょっと|あり|ある|あります|です)+$/;
     for(const chunk of chunks){
       const s=compact(chunk);let i=0,rest='';
       const flush=()=>{const r=rest.replace(/[^\p{L}]/gu,'').replace(/^(?:이랑|랑|하고)/,'');if(r&&!PARTICLE.test(r)&&r.length>=1)unknown.push(r);rest='';};

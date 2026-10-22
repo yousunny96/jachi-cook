@@ -1,0 +1,8 @@
+{
+  "framework": null,
+  "buildCommand": "",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/*.js": { "includeFiles": "dist/*.js" }
+  }
+}
