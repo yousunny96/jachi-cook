@@ -45,7 +45,7 @@ test('Japanese is the default and no Korean is left on any screen',()=>{
  const app=appWith(state,undefined);
  assert.equal(app.I.lang,'ja');
  assert.deepEqual(visibleKorean(app.html()),[],'home');
- for(const page of ['fridge','kitchen','recipes','characters']){app.click('nav',undefined,{page});assert.deepEqual(visibleKorean(app.html()),[],page);}
+ for(const page of ['fridge','kitchen','recipes','characters','my']){app.click('nav',undefined,{page});assert.deepEqual(visibleKorean(app.html()),[],page);}
  for(const r of app.D.recipes){app.click('recipe',r.id);assert.deepEqual(visibleKorean(app.html()),[],r.id);}
  const welcome=appWith({...state,onboardingComplete:false},'ja');assert.deepEqual(visibleKorean(welcome.html()),[],'welcome');
 });
@@ -72,4 +72,13 @@ test('Japanese ingredient text is recognised, and Korean names still work in Jap
  assert.deepEqual([...p.unknown],[]);
  assert.deepEqual(Array.from(M.searchIngredients('たまご'),x=>x.id),['egg']);
  assert.deepEqual(Array.from(M.searchIngredients('계란'),x=>x.id),['egg']);
+});
+
+test('favorites live on the My page, not as a recipe book tab',()=>{
+ const state={version:1,onboardingComplete:true,selectedCharacter:'hachiware',ingredients:[],tools:[],condiments:[],favorites:['jp-oyakodon']};
+ const app=appWith(state,'ko');
+ app.click('nav',undefined,{page:'recipes'});assert.ok(!app.html().includes('data-id="fav"'));
+ app.click('nav',undefined,{page:'my'});const h=app.html();
+ assert.ok(h.includes('즐겨찾기한 요리'));assert.ok(h.includes('오야코동'));assert.ok(h.includes('data-action="login"'));
+ assert.ok(h.includes('data-page="my"')&&h.includes('aria-current="page"'));
 });

@@ -299,3 +299,9 @@ body{font-family:inherit}
 .no-bottom .sticky-action{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
 /* 검색창 바로 아래 보조 문구 */
 .search-box+.search-hint{margin:-8px 4px 14px}
+/* 마이: 로그인 자리 */
+.login-card{display:flex;align-items:center;gap:12px;background:#fff7ec;border:1px solid #ead8c1;border-radius:18px;padding:16px;margin-bottom:26px}
+.login-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.login-copy strong{font-size:15px;letter-spacing:-.3px}
+.login-copy small{font-size:11px;color:#7d604b;line-height:1.6;word-break:keep-all}
+.login-card .login-button{width:auto;flex-shrink:0;min-height:44px;padding:10px 16px}
