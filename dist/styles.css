@@ -305,3 +305,8 @@ body{font-family:inherit}
 .login-copy strong{font-size:15px;letter-spacing:-.3px}
 .login-copy small{font-size:11px;color:#7d604b;line-height:1.6;word-break:keep-all}
 .login-card .login-button{width:auto;flex-shrink:0;min-height:44px;padding:10px 16px}
+.login-card.signed-in{flex-wrap:wrap}
+.login-avatar{width:44px;height:44px;border-radius:50%;flex-shrink:0;border:2px solid #ead8c1}
+.login-actions{display:flex;gap:8px;flex-shrink:0}
+.login-actions a.login-button{display:inline-flex;align-items:center;text-decoration:none}
+.google-login{flex-shrink:0;min-height:44px;display:flex;align-items:center}
