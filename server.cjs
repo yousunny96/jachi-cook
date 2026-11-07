@@ -1,6 +1,7 @@
 'use strict';
 const http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path');
 const D=require('./dist/data.js');
+const {createAuthRoutes}=require('./auth.cjs');
 const ROOT=path.join(__dirname,'dist');
 function validate(d,r){
  const ids=[...r.ingredients,...r.condiments].sort();
@@ -45,12 +46,17 @@ function defaultFeedbackStore(env=process.env,now=Date.now){
  return url&&token?redisFeedbackStore(url,token,now):fileFeedbackStore(env.FEEDBACK_FILE||path.join(__dirname,'data','feedback.jsonl'),now);
 }
 // 요청 처리기 하나를 로컬 서버(createServer)와 Vercel 함수(api/*.js)가 같이 쓴다.
-function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now,feedbackStore=defaultFeedbackStore(process.env,now)}={}){
+function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now,feedbackStore=defaultFeedbackStore(process.env,now),env=process.env,userStore}={}){
  const cache=new Map(),inflight=new Map();let requests=[],daily=[];
+ const auth=createAuthRoutes({env,fetchImpl,now,feedbackStore,...(userStore?{userStore}:{})});
  return async(req,res)=>{
   const json=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   try{
    const url=new URL(req.url,'http://localhost');
+   // 로그인·내 정보·어드민(auth.cjs). 같은 사이트에서 온 요청만, JSON만 받는다.
+   const sameOrigin=()=>{const origin=req.headers.origin;return !origin||origin===`http://${req.headers.host}`||origin===`https://${req.headers.host}`;};
+   const readJson=async limit=>{if(!String(req.headers['content-type']).startsWith('application/json')){json(415,{error:'JSON required'});return null;}let body='';for await(const chunk of req){body+=chunk;if(body.length>limit){json(413,{error:'Request too large'});return null;}}try{const v=JSON.parse(body);if(v&&typeof v==='object'&&!Array.isArray(v))return v;}catch{}json(400,{error:'Invalid JSON'});return null;};
+   if(await auth(req,res,url,{json,readJson,sameOrigin}))return;
    if(url.pathname==='/api/feedback'){
     // GET은 앱이 '의견을 받을 수 있는 서버인지'만 확인한다. 쌓인 의견은 내려주지 않는다.
     if(req.method==='GET')return json(200,{ok:true});
