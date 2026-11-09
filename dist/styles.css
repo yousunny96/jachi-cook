@@ -305,3 +305,8 @@ body{font-family:inherit}
 .login-copy strong{font-size:15px;letter-spacing:-.3px}
 .login-copy small{font-size:11px;color:#7d604b;line-height:1.6;word-break:keep-all}
 .login-card .login-button{width:auto;flex-shrink:0;min-height:44px;padding:10px 16px}
+/* 구글 버튼은 iframe이라 안쪽 크기를 건드릴 수 없다. 자리만 잡아 준다. */
+.login-card #g-signin{padding:0;min-height:40px;display:flex;align-items:center}
+.login-card.signed-in .login-button{padding:10px 12px;font-size:12px}
+.login-card.signed-in .login-copy strong{word-break:break-all}
+.login-pending{flex-shrink:0;color:#9b7f6b;font-size:11px;padding:10px 14px;border:1px dashed #ead8c1;border-radius:999px}

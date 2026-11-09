@@ -79,6 +79,10 @@ test('favorites live on the My page, not as a recipe book tab',()=>{
  const app=appWith(state,'ko');
  app.click('nav',undefined,{page:'recipes'});assert.ok(!app.html().includes('data-id="fav"'));
  app.click('nav',undefined,{page:'my'});const h=app.html();
- assert.ok(h.includes('즐겨찾기한 요리'));assert.ok(h.includes('오야코동'));assert.ok(h.includes('data-action="login"'));
+ assert.ok(h.includes('즐겨찾기한 요리'));assert.ok(h.includes('오야코동'));
+ // 로그인 자리: 클라이언트 ID를 넣으면 #g-signin(구글 버튼), 아직이면 '준비 중'.
+ assert.ok(h.includes('login-card'));
+ assert.ok(h.includes('id="g-signin"')||h.includes('login-pending'));
+ assert.ok(!h.includes('data-action="logout"'));   // 로그인 전에는 로그아웃이 없다
  assert.ok(h.includes('data-page="my"')&&h.includes('aria-current="page"'));
 });

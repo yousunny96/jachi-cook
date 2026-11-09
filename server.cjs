@@ -1,6 +1,7 @@
 'use strict';
-const http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path');
+const http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
 const D=require('./dist/data.js');
+const M=require('./dist/model.js');
 const ROOT=path.join(__dirname,'dist');
 function validate(d,r){
  const ids=[...r.ingredients,...r.condiments].sort();
@@ -32,8 +33,12 @@ function fileFeedbackStore(file,now){let times=[];return{
  async append(entry){await fs.mkdir(path.dirname(file),{recursive:true});await fs.appendFile(file,JSON.stringify(entry)+'\n');},
  async list(){try{return (await fs.readFile(file,'utf8')).split('\n').filter(Boolean).map(l=>JSON.parse(l));}catch(e){if(e.code==='ENOENT')return [];throw e;}}
 };}
+// Upstash REST 파이프라인. 의견과 계정 상태가 같이 쓴다.
+function redisPipeline(url,token,fetchImpl=fetch){
+ return async commands=>{const r=await fetchImpl(url.replace(/\/$/,'')+'/pipeline',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(commands),signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('Store unavailable');const out=await r.json();if(out.some(x=>x.error))throw Error('Store error');return out.map(x=>x.result);};
+}
 function redisFeedbackStore(url,token,now,fetchImpl=fetch){
- const run=async commands=>{const r=await fetchImpl(url.replace(/\/$/,'')+'/pipeline',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(commands),signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('Feedback store unavailable');const out=await r.json();if(out.some(x=>x.error))throw Error('Feedback store error');return out.map(x=>x.result);};
+ const run=redisPipeline(url,token,fetchImpl);
  return{
   async allow(){const key='sobok:feedback:rate:'+Math.floor(now()/60000);const [count]=await run([['INCR',key],['EXPIRE',key,'120']]);return count<=30;},
   async append(entry){await run([['RPUSH','sobok:feedback',JSON.stringify(entry)]]);},
@@ -44,8 +49,88 @@ function defaultFeedbackStore(env=process.env,now=Date.now){
  const url=env.UPSTASH_REDIS_REST_URL||env.KV_REST_API_URL,token=env.UPSTASH_REDIS_REST_TOKEN||env.KV_REST_API_TOKEN;
  return url&&token?redisFeedbackStore(url,token,now):fileFeedbackStore(env.FEEDBACK_FILE||path.join(__dirname,'data','feedback.jsonl'),now);
 }
+
+/* ---------- 구글 로그인 ----------
+ * 흐름: 브라우저가 구글에서 받은 ID 토큰 → /api/login에서 검증 → 서명한 세션 쿠키.
+ * 계정에는 Google 식별자(sub)와 normalizeState를 통과한 상태만 둔다. 이메일은 저장하지 않는다. */
+
+// 계정 상태 저장소: Redis가 있으면 Redis, 없으면 로컬 파일(로컬 검토용).
+function redisUserStore(run){return{
+ async read(sub){const [raw]=await run([['GET','sobok:user:'+sub]]);return raw?JSON.parse(raw):null;},
+ async write(sub,state){await run([['SET','sobok:user:'+sub,JSON.stringify(state)]]);}
+};}
+function fileUserStore(file){
+ const all=async()=>{try{return JSON.parse(await fs.readFile(file,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}};
+ return{
+  async read(sub){return (await all())[sub]||null;},
+  async write(sub,state){const map=await all();map[sub]=state;await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,JSON.stringify(map));}
+ };
+}
+function defaultUserStore(env=process.env){
+ const url=env.UPSTASH_REDIS_REST_URL||env.KV_REST_API_URL,token=env.UPSTASH_REDIS_REST_TOKEN||env.KV_REST_API_TOKEN;
+ return url&&token?redisUserStore(redisPipeline(url,token)):fileUserStore(env.USER_FILE||path.join(__dirname,'data','users.json'));
+}
+
+// 구글 공개키(JWKS): kid로 찾고, Cache-Control이 허락하는 동안 메모리에 둔다.
+const GOOGLE_CERTS='https://www.googleapis.com/oauth2/v3/certs';
+function createKeyCache(){
+ let keys=[],until=0;
+ return async function googleKey(kid,fetchImpl,now){
+  if(now()>=until){
+   const r=await fetchImpl(GOOGLE_CERTS,{signal:AbortSignal.timeout(5000)});
+   if(!r.ok)throw Error('JWKS unavailable');
+   const age=/max-age=(\d+)/.exec(r.headers?.get?.('cache-control')||'')?.[1];
+   keys=(await r.json()).keys||[];until=now()+Math.min(Number(age)||3600,86400)*1000;
+  }
+  const jwk=keys.find(k=>k.kid===kid);
+  if(!jwk)throw Error('Unknown key id');
+  return crypto.createPublicKey({key:jwk,format:'jwk'});
+ };
+}
+const GOOGLE_ISS=['accounts.google.com','https://accounts.google.com'];
+// ID 토큰: RS256 서명 → iss·aud·exp·email_verified. 하나라도 어긋나면 던진다.
+// aud 검사를 빼면 다른 사이트에서 받은 구글 토큰으로도 로그인되므로 절대 빼지 않는다.
+async function verifyIdToken(token,{clientId,fetchImpl=fetch,now=Date.now,googleKey=createKeyCache()}={}){
+ if(!clientId)throw Error('Client id missing');
+ if(typeof token!=='string'||token.length>4096)throw Error('Invalid token');
+ const [h,p,s]=token.split('.');
+ if(!h||!p||!s)throw Error('Invalid token');
+ let header,claims;
+ try{header=JSON.parse(Buffer.from(h,'base64url'));claims=JSON.parse(Buffer.from(p,'base64url'));}catch{throw Error('Invalid token');}
+ if(header.alg!=='RS256'||typeof header.kid!=='string')throw Error('Invalid alg');
+ const key=await googleKey(header.kid,fetchImpl,now);
+ if(!crypto.verify('RSA-SHA256',Buffer.from(h+'.'+p),key,Buffer.from(s,'base64url')))throw Error('Bad signature');
+ if(!GOOGLE_ISS.includes(claims.iss)||claims.aud!==clientId)throw Error('Invalid audience');
+ if(!(Number(claims.exp)*1000>now()))throw Error('Token expired');
+ if(claims.email_verified!==true||typeof claims.sub!=='string'||!claims.sub)throw Error('Invalid claims');
+ // 이름은 화면 표시용으로만 받는다.
+ return {sub:claims.sub,name:String(claims.name||'').slice(0,40)};
+}
+
+// 세션 쿠키: 상태를 서버에 두지 않고 payload에 서명만 한다.
+const SESSION_COOKIE='sobok_session',SESSION_TTL=30*24*3600;
+function signSession(payload,secret){
+ const body=Buffer.from(JSON.stringify(payload)).toString('base64url');
+ return body+'.'+crypto.createHmac('sha256',secret).update(body).digest('base64url');
+}
+function readSession(req,secret,now=Date.now){
+ if(!secret)return null;
+ const raw=/(?:^|;\s*)sobok_session=([^;]+)/.exec(req.headers?.cookie||'')?.[1];
+ if(!raw)return null;
+ const [body,sig]=raw.split('.');
+ if(!body||!sig)return null;
+ const want=crypto.createHmac('sha256',secret).update(body).digest('base64url');
+ const a=Buffer.from(sig),b=Buffer.from(want);
+ // timingSafeEqual은 길이가 다르면 던지므로 길이를 먼저 본다.
+ if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return null;
+ try{const p=JSON.parse(Buffer.from(body,'base64url'));return p.exp>now()/1000?p:null;}catch{return null;}
+}
+// 로컬 http에서 Secure를 켜면 쿠키가 아예 붙지 않는다.
+const sessionCookie=(req,value,maxAge)=>
+ `${SESSION_COOKIE}=${value}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`+(req.headers?.['x-forwarded-proto']==='https'?'; Secure':'');
+
 // 요청 처리기 하나를 로컬 서버(createServer)와 Vercel 함수(api/*.js)가 같이 쓴다.
-function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now,feedbackStore=defaultFeedbackStore(process.env,now)}={}){
+function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',fetchImpl=fetch,now=Date.now,feedbackStore=defaultFeedbackStore(process.env,now),clientId=process.env.GOOGLE_CLIENT_ID,sessionSecret=process.env.SESSION_SECRET,userStore=defaultUserStore(process.env),googleKey=createKeyCache()}={}){
  const cache=new Map(),inflight=new Map();let requests=[],daily=[];
  return async(req,res)=>{
   const json=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
@@ -109,6 +194,45 @@ function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMI
     const raw=candidate.content?.parts?.map(p=>p.text||'').join('')||'';if(raw.length>4000)throw Error('Invalid size');
     const data=validateIngredientMatches(JSON.parse(raw),words);cache.set(key,{time:now(),data});return json(200,data);
    }
+   /* ---------- 로그인 ---------- */
+   if(url.pathname==='/api/login'||url.pathname==='/api/logout'||url.pathname==='/api/state'){
+    // 외부 사이트에서 쿠키를 들고 호출하지 못하게 한다(SameSite=Lax와 이중 방어).
+    const origin=req.headers.origin;
+    if(origin&&origin!==`http://${req.headers.host}`&&origin!==`https://${req.headers.host}`)return json(403,{error:'Origin rejected'});
+    const body=async limit=>{let b='';for await(const c of req){b+=c;if(b.length>limit)return null;}return b;};
+    const wantsJson=()=>String(req.headers['content-type']).startsWith('application/json');
+
+    if(url.pathname==='/api/login'){
+     if(req.method!=='POST')return json(405,{error:'POST required'});
+     if(!clientId||!sessionSecret)return json(503,{error:'Login not configured'});
+     if(!wantsJson())return json(415,{error:'JSON required'});
+     const raw=await body(8192);if(raw===null)return json(413,{error:'Request too large'});
+     let account;
+     try{account=await verifyIdToken(JSON.parse(raw)?.credential,{clientId,fetchImpl,now,googleKey});}
+     catch{return json(401,{error:'Sign-in rejected'});}
+     const saved=await userStore.read(account.sub).catch(()=>null);
+     res.setHeader('Set-Cookie',sessionCookie(req,signSession({sub:account.sub,exp:Math.floor(now()/1000)+SESSION_TTL},sessionSecret),SESSION_TTL));
+     return json(200,{account:{name:account.name},state:saved});
+    }
+
+    if(url.pathname==='/api/logout'){
+     if(req.method!=='POST')return json(405,{error:'POST required'});
+     res.setHeader('Set-Cookie',sessionCookie(req,'',0));
+     return json(200,{ok:true});
+    }
+
+    // 계정에 담긴 상태 읽기·쓰기. 들어온 값은 normalizeState를 통과한 것만 저장한다.
+    const session=readSession(req,sessionSecret,now);
+    if(!session)return json(401,{error:'Sign-in required'});
+    if(req.method==='GET')return json(200,{state:await userStore.read(session.sub)});
+    if(req.method!=='PUT')return json(405,{error:'GET or PUT required'});
+    if(!wantsJson())return json(415,{error:'JSON required'});
+    const raw=await body(4096);if(raw===null)return json(413,{error:'Request too large'});
+    let state;try{state=M.normalizeState(JSON.parse(raw));}catch{return json(400,{error:'Invalid state'});}
+    await userStore.write(session.sub,state);
+    return json(200,{ok:true});
+   }
+
    if(!['GET','HEAD'].includes(req.method))return json(405,{error:'Method not allowed'});
    const relative=decodeURIComponent(url.pathname==='/'?'/index.html':url.pathname);const file=path.resolve(ROOT,'.'+relative);
    if(!file.startsWith(ROOT+path.sep))return json(403,{error:'Forbidden'});
@@ -119,4 +243,5 @@ function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMI
 function createServer(options){return http.createServer(createHandler(options));}
 // 다른 사람이 접속하게 하려면 HOST=0.0.0.0 으로 실행한다.
 if(require.main===module){const host=process.env.HOST||'127.0.0.1',port=Number(process.env.PORT)||4173;createServer().listen(port,host,()=>console.log(`Local: http://${host}:${port}`));}
-module.exports={createServer,createHandler,defaultFeedbackStore,fileFeedbackStore,redisFeedbackStore,validate,validateIngredientMatches,validateFeedback};
+module.exports={createServer,createHandler,defaultFeedbackStore,fileFeedbackStore,redisFeedbackStore,validate,validateIngredientMatches,validateFeedback,
+ verifyIdToken,createKeyCache,signSession,readSession,defaultUserStore,fileUserStore,redisUserStore,redisPipeline,SESSION_TTL};

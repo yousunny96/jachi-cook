@@ -9,7 +9,11 @@
   const icon = name => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]||iconPaths.pot}</svg>`;
   // 친구는 픽셀 그림(characters-pixel.png)을 잘라 쓴다. 발이 아래에 닿도록 아래 정렬하고, 남는 공간에 옆 친구가 비치지 않게 영역 밖은 clipPath로 자른다.
   function avatar(id, label = false) { const c=D.characters.find(c=>c.id===id)||D.characters[1]; return `<svg class="avatar" viewBox="${c.crop.join(' ')}" preserveAspectRatio="xMidYMax meet" ${label?`role="img" aria-label="${c.name}"`:'aria-hidden="true"'}><clipPath id="av-${c.id}"><rect x="${c.crop[0]}" y="${c.crop[1]}" width="${c.crop[2]}" height="${c.crop[3]}"/></clipPath><image href="assets/characters-pixel.png" width="1774" height="887" clip-path="url(#av-${c.id})"/></svg>`; }
-  const hydrate = scope => window.SobokVoxel?.hydrate(scope);
+  const hydrate = scope => { window.SobokVoxel?.hydrate(scope); hydrateGoogle(); };
+  // 구글 로그인 클라이언트 ID. 비밀값이 아니라 공개 식별자라서 소스에 둔다.
+  // Google Auth Platform → Clients에서 만든 웹 애플리케이션 클라이언트 ID로 바꾼다.
+  const GOOGLE_CLIENT_ID = 'REPLACE_ME.apps.googleusercontent.com';
+  const SIGNED_IN_KEY = 'sobok.signedin'; // HttpOnly 쿠키는 읽을 수 없어 로그인 흔적만 따로 둔다(민감 정보 아님).
   // 블록 부엌: 오버레이는 data-anchor(x,y,z 블록 좌표)로 위치를 잡는다.
   const ROOM_IMAGE='assets/kitchen-base.webp', ROOM_OPEN='fridge=assets/kitchen-open-fridge.webp|kitchen=assets/kitchen-open-pot.webp|recipes=assets/kitchen-open-book.webp';
   function voxelRoom(inner='', label=t('픽셀 그림 부엌: 왼쪽 냉장고와 창문, 안쪽 싱크대와 가스레인지 위 냄비, 오른쪽 앞 식탁 위 요리책'), fit=false) { return `<div class="voxel-room pixel-room" data-voxel-room data-room-image="${ROOM_IMAGE}" data-room-open="${ROOM_OPEN}" ${fit?'data-fit="contain"':''}><canvas class="voxel-room-canvas" role="img" aria-label="${label}"></canvas>${inner}</div>`; }
@@ -31,13 +35,97 @@
   }
   let storage; try{storage=window.localStorage;}catch{storage=null;}
   const loaded=M.readStorage(storage); let state=loaded.state, storageAvailable=loaded.available, recoveryNotice=loaded.recovered;
+  let account=null;      // 로그인한 계정 {name} 또는 null. 상태의 진실 원천은 계속 이 브라우저다.
+  let gsiReady=false;    // google.accounts.id.initialize를 한 번만 부르기 위한 표시
   const openSections={recs:false};
   let cuisine='all'; // 요리책 분류 필터: all | korean | japanese (난이도 필터와 함께 적용)
   let catalogOpen=false; // 요리책 '전체 메뉴 둘러보기'를 연 상태. 하트를 눌러 화면을 다시 그려도 열린 채로 둔다.
   let opening=false, lastPickId=null, justOpened=null; // justOpened: 방금 연 패널만 올라오는 애니메이션 // 부엌 가구가 열리는 동안 중복 클릭 막기
   let page=state.onboardingComplete?'home':'welcome', previousPage='home', currentRecipeId=null, filter='all', category='전체', query='', draftIngredients=[], draftKitchen={tools:[],condiments:[]}, onboarding=false, feedbackDraft=null, feedbackServer=null, chosenCharacter=state.selectedCharacter, showExternal=false, lastDialogFocus=null, toastTimer;
   const app=$('#app');
-  function persist(next){state=M.normalizeState(next);storageAvailable=M.saveStorage(storage,state);recoveryNotice=false;}
+  function persist(next){state=M.normalizeState(next);storageAvailable=M.saveStorage(storage,state);recoveryNotice=false;pushState();}
+
+  /* ---------- 구글 로그인 ----------
+   * 이 브라우저(localStorage)가 계속 화면의 진실 원천이고, 계정은 거울이다.
+   * 그래서 서버가 없거나 끊겨도 앱은 그대로 돌아간다. */
+  // 파일 하나로 묶은 빌드는 서버가 없다. fetch가 없는 환경(테스트)에서도 요청은 보내지 않는다.
+  const isFileBuild=()=>window.location?.protocol==='file:';
+  const canCallApi=()=>typeof fetch==='function'&&!isFileBuild();
+  const signedInBefore=()=>{try{return storage?.getItem(SIGNED_IN_KEY)==='1';}catch{return false;}};
+  const markSignedIn=on=>{try{storage?.setItem(SIGNED_IN_KEY,on?'1':'0');}catch{}};
+
+  // 저장은 묶어서 보낸다. 재료를 하나씩 누를 때마다 보내면 Redis 호출이 금방 찬다.
+  let pushTimer=0;
+  function pushState(){
+    if(!account||!canCallApi())return;
+    clearTimeout(pushTimer);
+    pushTimer=setTimeout(()=>{
+      fetch('/api/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),signal:AbortSignal.timeout(8000)}).catch(()=>{});
+    },800);
+  }
+
+  // 첫 로그인 병합: 재료·도구·양념·즐겨찾기는 합집합으로 둔다. 어느 쪽을 버려도 담아 둔 게 사라져 보인다.
+  // 친구와 처음 설정 여부는 이 브라우저 쪽을 쓴다.
+  function mergeWithAccount(remote){
+    if(!remote){pushState();return false;}
+    const union=(a,b)=>Array.from(new Set([...(a||[]),...(b||[])]));
+    const merged={...state,
+      ingredients:union(state.ingredients,remote.ingredients),
+      tools:union(state.tools,remote.tools),
+      condiments:union(state.condiments,remote.condiments),
+      favorites:union(M.favoritesOf(state),M.favoritesOf(remote)),
+      onboardingComplete:state.onboardingComplete||!!remote.onboardingComplete};
+    const changed=JSON.stringify(M.normalizeState(merged))!==JSON.stringify(state);
+    persist(merged);
+    return changed;
+  }
+
+  // 구글 버튼은 iframe이라 다시 그리면 깜빡인다. 자리가 비어 있을 때만 그린다.
+  // gsi/client는 async defer라 첫 렌더보다 늦게 올 수 있다. 올 때까지 잠깐 다시 본다.
+  let gsiTimer=0,gsiTries=0;
+  function hydrateGoogle(){
+    clearTimeout(gsiTimer);
+    const host=$('#g-signin');
+    if(!host||host.firstChild)return;
+    if(GOOGLE_CLIENT_ID.startsWith('REPLACE_ME'))return;
+    if(!window.google?.accounts?.id){
+      if(gsiTries++<20)gsiTimer=setTimeout(hydrateGoogle,300);  // 6초까지 기다린다
+      return;
+    }
+    gsiTries=0;
+    if(!gsiReady){
+      window.google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:onGoogleCredential,use_fedcm_for_prompt:true,auto_select:false,cancel_on_tap_outside:true});
+      gsiReady=true;
+    }
+    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',shape:'pill',text:'signin_with',locale:I.lang});
+  }
+
+  async function onGoogleCredential(response){
+    try{
+      const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response?.credential}),signal:AbortSignal.timeout(10000)});
+      if(!r.ok)throw Error('login failed');
+      const data=await r.json();
+      account=data.account||{};markSignedIn(true);
+      const changed=mergeWithAccount(data.state);
+      render();
+      toast(changed?t('로그인했어요. 계정에 있던 재료와 즐겨찾기를 합쳤어요.'):t('로그인했어요.'));
+    }catch{toast(t('로그인하지 못했어요. 잠시 뒤 다시 시도해 주세요.'));}
+  }
+
+  async function signOut(){
+    try{await fetch('/api/logout',{method:'POST',signal:AbortSignal.timeout(8000)});}catch{}
+    window.google?.accounts?.id?.disableAutoSelect?.();  // 다음 방문에 자동으로 다시 로그인되지 않게
+    account=null;markSignedIn(false);render();toast(t('로그아웃했어요.'));
+  }
+
+  // 새로고침 뒤 복원. 로그인한 적 없는 사람에게 쓸데없는 요청을 보내지 않는다.
+  function restoreAccount(){
+    if(!canCallApi()||!signedInBefore())return;
+    fetch('/api/state',{signal:AbortSignal.timeout(8000)})
+      .then(r=>r.ok?r.json():null)
+      .then(data=>{if(!data)throw Error('not signed in');account=account||{};mergeWithAccount(data.state);render();})
+      .catch(()=>{markSignedIn(false);});
+  }
   function nameOf(id,type='ingredients'){return D[type].find(item=>item.id===id)?.name||id;}
   function names(ids,type='ingredients'){return ids.map(id=>nameOf(id,type)).join(' · ');}
   function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').classList.add('visible');toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),3200);}
@@ -176,8 +264,19 @@
   function cuisineRow(){const tab=cuisine;return `<div class="cuisine-tabs" aria-label="${t('분류')}">${[['all','전체'],['korean','한식'],['japanese','일본식']].map(([id,n])=>`<button class="cuisine-tab ${tab===id?'active':''}" data-action="cuisine" data-id="${id}" aria-pressed="${tab===id}">${t(n)} <span>${D.recipes.filter(r=>id==='all'||r.cuisine===id).length}</span></button>`).join('')}</div>`;}
   function difficultyRow(){return `<div class="difficulty-row" aria-label="${t('난이도')}"><span class="row-label">${t('난이도')}</span>${['easy','medium','hard'].map(id=>`<button class="level-chip ${filter===id?'active':''}" data-action="difficulty" data-id="${filter===id?'all':id}" aria-pressed="${filter===id}">${D.difficultyNames[id]}</button>`).join('')}</div>`;}
   function recipes(){const rec=M.recommendations(state,filter,D.recipes.filter(byCuisine)),empty=mainEmpty();return `<section class="page"><div class="page-intro"><p class="eyebrow">${t('오늘의 한 끼 찾기')}</p><h1 class="page-title" tabindex="-1">${t('우리 집 요리책')}</h1><p class="page-description">${t('가진 도구로 할 수 있는 요리,<br>쉬운 순서로 차곡차곡 모았어요.')}</p></div>${cuisineRow()}${difficultyRow()}${empty||`<section class="list-section"><div class="section-heading"><h2>${t('바로 만들 수 있어요')}<span class="recipe-group-count">${rec.ready.length}</span></h2></div>${rec.ready.length?`<div class="recipe-grid">${rec.ready.map(r=>recipeCard(r)).join('')}</div>`:emptyBlock(t('지금 딱 맞는 예시가 없어요'),t('다른 난이도를 보거나 재료를 더 담아보세요.'),'fridge',t('재료 추가하기'))}</section><section class="list-section"><div class="section-heading"><h2>${t('1~2개만 사면 돼요')}<span class="recipe-group-count">${rec.almost.length}</span></h2></div>${rec.almost.length?`<div class="recipe-grid">${rec.almost.map(r=>recipeCard(r)).join('')}</div>`:emptyBlock(t('추가 재료로 가능한 예시가 없어요'),t('재료나 양념을 바꾸면 목록도 달라져요.'),'kitchen',t('내 주방 확인하기'),'🍳')}</section>`}<details class="catalog-all" ${catalogOpen?'open':''}><summary>${t('전체 메뉴 {n}개 둘러보기',{n:D.recipes.filter(byCuisine).length})}</summary><p class="section-subtitle">${t('보유 재료와 관계없이 모든 메뉴를 볼 수 있어요.')}</p><div class="recipe-grid">${D.recipes.filter(byCuisine).filter(r=>filter==='all'||r.difficulty===filter).map(r=>recipeCard(r)).join('')}</div></details><p class="prototype-note">${t('AI가 작성한 레시피예요. 조리 시간은 예상이에요.<br>무료 모델 연결 시 조리 단계를 새로 생성할 수 있어요.')}</p></section>`;}
-  // 마이: 로그인(곧 연결) 자리와 즐겨찾기한 요리. 즐겨찾기는 지금은 이 브라우저에 저장되고, 로그인을 붙이면 계정으로 옮긴다.
-  function my(){const favs=M.favoritesOf(state).map(id=>D.recipes.find(r=>r.id===id)).filter(Boolean);return `<section class="page"><div class="page-intro"><h1 class="page-title" tabindex="-1">${t('마이')}</h1></div><div class="login-card"><div class="login-copy"><strong>${t('로그인하고 즐겨찾기를 보관해요')}</strong><small>${t('지금은 이 브라우저에만 저장돼요. 로그인하면 다른 기기에서도 볼 수 있어요.')}</small></div><button class="primary-button login-button" data-action="login">${t('로그인')}</button></div><section class="list-section"><div class="section-heading"><h2>${t('즐겨찾기한 요리')}<span class="recipe-group-count">${favs.length}</span></h2></div>${favs.length?`<div class="recipe-grid">${favs.map(r=>recipeCard(r)).join('')}</div>`:emptyBlock(t('아직 즐겨찾기한 요리가 없어요'),t('요리 카드의 하트를 누르면 여기에 모여요.'),'recipes',t('요리책 살펴보기'),'♡')}</section></section>`;}
+  // 마이의 로그인 자리. 구글 버튼은 #g-signin 안에 hydrateGoogle이 그린다.
+  // 파일 하나로 묶은 빌드(file://)에는 서버가 없어 로그인 자리를 아예 두지 않는다.
+  function loginCard(){
+    if(account)return `<div class="login-card signed-in"><div class="login-copy"><strong>${esc(account.name||t('로그인됨'))}</strong><small>${t('재료와 즐겨찾기가 계정에 저장돼요.')}</small></div><button class="cancel-link login-button" data-action="logout">${t('로그아웃')}</button></div>`;
+    if(isFileBuild())return '';
+    // 클라이언트 ID를 아직 안 넣었으면 빈 자리 대신 그렇다고 알린다.
+    const slot=GOOGLE_CLIENT_ID.startsWith('REPLACE_ME')
+      ? `<small class="login-pending">${t('로그인 준비 중')}</small>`
+      : '<div id="g-signin" class="login-button"></div>';
+    return `<div class="login-card"><div class="login-copy"><strong>${t('로그인하고 즐겨찾기를 보관해요')}</strong><small>${t('지금은 이 브라우저에만 저장돼요. 로그인하면 다른 기기에서도 볼 수 있어요.')}</small></div>${slot}</div>`;
+  }
+  // 마이: 로그인 자리와 즐겨찾기한 요리.
+  function my(){const favs=M.favoritesOf(state).map(id=>D.recipes.find(r=>r.id===id)).filter(Boolean);return `<section class="page"><div class="page-intro"><h1 class="page-title" tabindex="-1">${t('마이')}</h1></div>${loginCard()}<section class="list-section"><div class="section-heading"><h2>${t('즐겨찾기한 요리')}<span class="recipe-group-count">${favs.length}</span></h2></div>${favs.length?`<div class="recipe-grid">${favs.map(r=>recipeCard(r)).join('')}</div>`:emptyBlock(t('아직 즐겨찾기한 요리가 없어요'),t('요리 카드의 하트를 누르면 여기에 모여요.'),'recipes',t('요리책 살펴보기'),'♡')}</section></section>`;}
   function characters(){const chosen=D.characters.find(c=>c.id===chosenCharacter);return `<section class="page"><h1 class="page-title" tabindex="-1">${t('함께 요리할 친구')}</h1><p class="page-description">${t('친구마다 다른 말투로 함께해요.')}</p><div class="character-grid" aria-label="${t('친구 선택')}">${D.characters.map(c=>`<button class="character-card ${c.id===chosenCharacter?'selected':''}" data-action="choose-character" data-id="${c.id}" aria-pressed="${c.id===chosenCharacter}">${avatar(c.id)}<strong>${c.name}</strong><small>${c.personality}</small></button>`).join('')}</div><div class="sticky-action"><button class="primary-button" data-action="save-character">${t('{name}와 함께하기',{name:chosen.name})} ${icon('chevron')}</button><button class="cancel-link" data-action="back">${t('취소 · 친구는 언제든 바꿀 수 있어요')}</button></div></section>`;}
   const aiResults={};
   function recipeInstructions(r){const d=aiResults[r.id]||r;return `<div class="ai-recipe"><p class="ai-source">${t('1인분')}</p><ol class="cooking-steps">${d.steps.map(step=>`<li>${esc(step)}</li>`).join('')}</ol><p class="ai-tip">💡 ${esc(d.tip)}</p></div>`;}
@@ -226,7 +325,7 @@
     else if(action==='save-kitchen'){persist({...state,tools:draftKitchen.tools,condiments:draftKitchen.condiments});if(onboarding)navigate('fridge');else{navigate('home');toast(t('내 주방을 저장했어요.'));}}
     else if(action==='save-fridge'){persist({...state,ingredients:draftIngredients,onboardingComplete:true});onboarding=false;navigate('home');toast(t('냉장고를 저장하고 추천을 다시 골랐어요.'));}
     else if(action==='cuisine'){cuisine=id;preserveFocusRender(button);}
-    else if(action==='login'){toast(t('로그인은 곧 열릴 예정이에요.'));}
+    else if(action==='logout'){signOut();}
     else if(action==='difficulty'){filter=id;preserveFocusRender(button);}
     else if(action==='recipe'){closeDialog();navigate('detail',{recipeId:id});}
     else if(action==='choose-character'){chosenCharacter=id;preserveFocusRender(button);}
@@ -248,5 +347,5 @@
   document.addEventListener('change',event=>{if(event.target.name==='consumed'){const count=document.querySelectorAll('[name="consumed"]:checked').length;const b=$('[data-action="remove-consumed"]');b.disabled=count===0;b.textContent=count?t('재료 {n}개 냉장고에서 빼기',{n:count}):t('뺄 재료를 선택해주세요');}});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('.app-dialog')&&['fridge','kitchen','characters','detail'].includes(page)){event.preventDefault();returnHome();}});
   window.addEventListener('popstate',event=>{if(page==='detail'&&!feedbackDone())setTimeout(maybeAskFeedback,1200);closeDialog();const target=event.state?.sobok?event.state:null;page=target?.page||(state.onboardingComplete?'home':'welcome');onboarding=!!target?.onboarding;currentRecipeId=target?.recipeId||currentRecipeId;if(!state.onboardingComplete&&['home','recipes','detail','my'].includes(page))page='welcome';if(page==='fridge'){draftIngredients=[...state.ingredients];query='';category='전체';}if(page==='kitchen')draftKitchen={tools:[...state.tools],condiments:[...state.condiments]};if(page==='characters'){chosenCharacter=state.selectedCharacter;}render();window.scrollTo(0,0);});
-  history.replaceState({sobok:true,page,onboarding:false},'',`#${page}`);I.applyPage(document);render();
+  history.replaceState({sobok:true,page,onboarding:false},'',`#${page}`);I.applyPage(document);render();restoreAccount();
 })();

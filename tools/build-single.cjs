@@ -11,6 +11,8 @@ const inlineAssets = text => text.replace(/assets\/([A-Za-z0-9._-]+\.(?:png|ttf|
   return `data:${MIME[path.extname(file)]};base64,${fs.readFileSync(p).toString('base64')}`;
 });
 let html = read('index.html');
+// 구글 로그인 스크립트는 뺀다. 파일 하나로 열면 서버가 없어 로그인을 쓸 수 없다(앱도 로그인 자리를 숨긴다).
+html = html.replace(/\s*<script src="https:\/\/accounts\.google\.com\/gsi\/client"[^>]*><\/script>/, '');
 const scripts = [...html.matchAll(/<script defer src="([^"]+)"><\/script>/g)].map(m => m[1]);
 html = html.replace(/<script defer src="[^"]+"><\/script>/g, '');
 html = html.replace('<link rel="stylesheet" href="styles.css">', () => `<style>\n${inlineAssets(read('styles.css'))}\n</style>`);

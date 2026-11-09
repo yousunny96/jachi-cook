@@ -14,6 +14,7 @@
 - **요리책**: 한식 30개 + 일본 가정식 30개, 모두 60개. 바로 만들 수 있는 요리·조금 부족한 요리로 나눠 보여 주고, 요리 종류·난이도 필터, 즐겨찾기, 랜덤 메뉴 돌리기를 지원합니다.
 - **레시피 상세**: 1인분 분량, 재료 보유·부족 표시, 번호별 조리 단계, YouTube·네이버 블로그 검색 링크. 다 만들면 사용한 재료를 냉장고에서 뺄지 확인합니다.
 - **친구 고르기**: 8명(치이카와·하치와레·우사기·시사·모몽가·랏코·쿠리만쥬·카니). 성격별 대사가 홈·추천·완료 화면에 나옵니다.
+- **마이**: 즐겨찾기한 요리를 모아 봅니다. 구글로 로그인하면 재료·도구·양념·즐겨찾기가 계정에 저장돼 다른 기기에서도 이어집니다. 처음 로그인할 때는 이 브라우저에 있던 것과 계정에 있던 것을 합칩니다(어느 쪽도 지우지 않습니다). 로그인하지 않아도 모든 기능은 그대로 쓸 수 있고, 화면은 늘 이 브라우저의 저장값으로 그립니다.
 - **의견 받기**: 레시피 상세를 처음 보고 나오면 친구가 "정식으로 나오면 또 같이 요리할래?"를 한 번만 묻습니다. 응 → 제일 좋았던 것 하나, 잘 모르겠어 → 아쉬운 점 한 줄(건너뛰기 가능), 닫으면 '닫음'으로 기록합니다. 의견 API가 없는 정적 페이지에서는 자동으로 띄우지 않습니다.
 - 상태는 이 브라우저(localStorage)에만 저장됩니다. 저장이 안 되면 현재 탭에서만 계속 쓸 수 있습니다.
 
@@ -24,13 +25,18 @@
 1. Vercel에서 이 저장소를 가져옵니다(Import). 설정은 `vercel.json`에 있어서 빌드 없이 `dist/`가 화면, `api/*.js`가 함수로 올라갑니다.
 2. 프로젝트의 **Storage → Marketplace**에서 **Upstash Redis**(무료 요금제)를 연결합니다. 연결하면 `UPSTASH_REDIS_REST_URL`·`UPSTASH_REDIS_REST_TOKEN`(또는 `KV_REST_API_URL`·`KV_REST_API_TOKEN`)이 환경 변수로 자동으로 들어가고, 의견은 Redis 목록 `sobok:feedback`에 쌓입니다.
 3. AI 기능을 쓰려면 환경 변수에 `GEMINI_API_KEY`를 넣습니다(선택).
-4. 의견 확인: `vercel env pull .env.local` 후 `node --env-file=.env.local tools/feedback-summary.cjs`.
+4. 구글 로그인을 쓰려면(선택) [Google Auth Platform](https://console.cloud.google.com/auth)에서 **웹 애플리케이션** 클라이언트를 만들고, **Authorized JavaScript origins**에 `http://localhost:4173`과 배포 주소를 넣습니다(리디렉션 URI는 쓰지 않습니다). 그 뒤
+   - `dist/app.js`의 `GOOGLE_CLIENT_ID`를 발급받은 ID로 바꾸고(비밀값이 아니라 공개 식별자입니다),
+   - 환경 변수에 `GOOGLE_CLIENT_ID`와 `SESSION_SECRET`(`openssl rand -base64 32`)을 넣습니다.
+   둘 중 하나라도 없으면 로그인은 503으로 거절되고 앱은 로그인 없이 그대로 동작합니다.
+5. 의견 확인: `vercel env pull .env.local` 후 `node --env-file=.env.local tools/feedback-summary.cjs`.
 
-의견은 정해진 값(답·좋았던 것·아쉬운 점 300자·친구·표시 경로)만 받고 IP는 저장하지 않으며, 전체 분당 30건까지 받습니다. AI 기능의 횟수 제한·캐시는 함수 인스턴스 메모리에 있어서 Vercel에서는 인스턴스마다 따로 셉니다. 공개 전 Gemini 키는 무료 한도 키로 두거나 공급자 쪽 한도를 걸어 두세요.
+의견은 정해진 값(답·좋았던 것·아쉬운 점 300자·친구·표시 경로)만 받고 IP는 저장하지 않으며, 전체 분당 30건까지 받습니다. 로그인을 켜면 구글 계정 식별자(`sub`)와 재료·도구·양념·즐겨찾기를 Redis에 `sobok:user:<sub>`로 저장합니다. 이메일·프로필 사진은 저장하지 않고, 이름은 화면 표시용으로만 받아 넘깁니다. AI 기능의 횟수 제한·캐시는 함수 인스턴스 메모리에 있어서 Vercel에서는 인스턴스마다 따로 셉니다. 공개 전 Gemini 키는 무료 한도 키로 두거나 공급자 쪽 한도를 걸어 두세요.
 
 ## 로컬 실행
 
-- **개발 서버**: Node.js 22 이상에서 `node server.cjs` 실행 후 http://127.0.0.1:4173 접속 (`PORT`로 포트, `HOST=0.0.0.0`으로 외부 접속 허용). Redis 환경 변수가 없으면 의견은 `data/feedback.jsonl`(`FEEDBACK_FILE`로 변경)에 쌓이고, `node tools/feedback-summary.cjs`로 봅니다.
+- **개발 서버**: Node.js 22 이상에서 `node server.cjs` 실행 후 http://127.0.0.1:4173 접속 (`PORT`로 포트, `HOST=0.0.0.0`으로 외부 접속 허용). Redis 환경 변수가 없으면 의견은 `data/feedback.jsonl`(`FEEDBACK_FILE`로 변경)에, 계정 상태는 `data/users.json`(`USER_FILE`로 변경)에 쌓이고, 의견은 `node tools/feedback-summary.cjs`로 봅니다. 구글은 `http://localhost:4173`과 `http://127.0.0.1:4173`을 다른 출처로 보므로, 로그인을 시험할 때는 등록한 쪽 주소로 접속하세요.
+- **테스트**: `node --test tests/*.cjs` (`node --test tests/`는 `.cjs`를 찾지 못합니다).
 - **파일 하나로 묶기**: `node tools/build-single.cjs [출력 경로]` → 스타일·스크립트·사용 중인 그림을 넣은 `sobok-prototype.html` 생성(기본 위치는 저장소 바깥 상위 폴더). 브라우저로 바로 열면 됩니다.
 - **AI 기능(선택)**: 서버 환경에 `GEMINI_API_KEY`를 설정합니다. 키는 대화·소스·HTML에 붙여 넣지 않습니다. `GEMINI_MODEL` 기본값은 `gemini-2.5-flash-lite`이며 유료 모델로 자동 전환하지 않습니다. 키가 없거나 한도가 차면 번들 초안을 그대로 씁니다.
 
@@ -41,6 +47,9 @@
 | `POST /api/recipe` | recipeId만 받아 서버가 카탈로그의 재료·도구로 레시피를 다시 생성. 응답의 ID·형식·길이를 검사하고 화면에는 텍스트로만 출력 |
 | `GET·POST /api/feedback` | GET은 의견 서버가 있는지만 확인(저장된 의견은 내려주지 않음). POST는 의견 한 건 저장 |
 | `POST /api/ingredients` | 앱이 못 알아본 단어(최대 12개)를 등록된 재료 ID 중에서만 매칭. 냉장고 정보는 보내지 않음 |
+| `POST /api/login` | 구글 ID 토큰을 검증(서명·발급자·대상·만료·이메일 인증)하고 HttpOnly 세션 쿠키를 내려줌 |
+| `POST /api/logout` | 세션 쿠키를 지움 |
+| `GET·PUT /api/state` | 로그인한 계정의 재료·도구·양념·즐겨찾기 읽기와 저장. 저장 전에 `normalizeState`를 통과시켜 등록된 ID만 남김 |
 
 성공 캐시 24시간, 외부 호출 분당 5회·24시간 30회, 요청 제한 20초입니다. 메모리 기반이라 재시작하면 초기화됩니다. 로컬 검토용 서버이므로 공개 배포 전 인증·사용량 제한·콘텐츠 검수를 추가해야 합니다.
 
