@@ -12,7 +12,7 @@
   const hydrate = scope => { window.SobokVoxel?.hydrate(scope); hydrateGoogle(); };
   // 구글 로그인 클라이언트 ID. 비밀값이 아니라 공개 식별자라서 소스에 둔다.
   // Google Auth Platform → Clients에서 만든 웹 애플리케이션 클라이언트 ID로 바꾼다.
-  const GOOGLE_CLIENT_ID = 'REPLACE_ME.apps.googleusercontent.com';
+  const GOOGLE_CLIENT_ID = '846785040957-ne0kmcrjif5bt8se9uslsv74k48h1jai.apps.googleusercontent.com';
   const SIGNED_IN_KEY = 'sobok.signedin'; // HttpOnly 쿠키는 읽을 수 없어 로그인 흔적만 따로 둔다(민감 정보 아님).
   // 블록 부엌: 오버레이는 data-anchor(x,y,z 블록 좌표)로 위치를 잡는다.
   const ROOM_IMAGE='assets/kitchen-base.webp', ROOM_OPEN='fridge=assets/kitchen-open-fridge.webp|kitchen=assets/kitchen-open-pot.webp|recipes=assets/kitchen-open-book.webp';
