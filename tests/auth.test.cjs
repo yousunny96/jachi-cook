@@ -154,6 +154,21 @@ test('Redis 환경 변수가 있으면 계정 저장소도 Redis를 쓴다',asyn
  const store=defaultUserStore({UPSTASH_REDIS_REST_URL:'https://x.upstash.io/',UPSTASH_REDIS_REST_TOKEN:'tok'});
  assert.equal(typeof store.read,'function');assert.equal(typeof store.write,'function');
  assert.equal(typeof defaultUserStore({USER_FILE:tmpUsers()}).read,'function');
+ // Vercel은 파일을 쓸 수 없다. Redis가 없으면 저장소를 두지 않는다.
+ assert.equal(defaultUserStore({VERCEL:'1'}),null);
+ assert.equal(typeof defaultUserStore({VERCEL:'1',UPSTASH_REDIS_REST_URL:'https://x.upstash.io/',UPSTASH_REDIS_REST_TOKEN:'tok'}).read,'function');
+});
+
+test('Redis 없이 Vercel에 올리면 로그인은 되고 동기화만 503으로 거절한다',async()=>{
+ const server=serve({userStore:defaultUserStore({VERCEL:'1'})});
+ const login=await call(server,'POST','/api/login',{credential:token()});
+ assert.equal(login.status,200);                 // 로그인 자체는 된다
+ assert.equal(login.data.state,null);
+ const cookie=cookieOf(login);
+ // 저장된 척하지 않는다. 조용히 실패하면 동기화된 줄 알게 된다.
+ assert.equal((await call(server,'GET','/api/state',undefined,{cookie})).status,503);
+ assert.equal((await call(server,'PUT','/api/state',{version:1},{cookie})).status,503);
+ assert.equal((await call(server,'GET','/api/state')).status,401);   // 비로그인은 여전히 401이 먼저
 });
 
 test('Vercel 함수 파일이 공용 처리기를 내보낸다',()=>{

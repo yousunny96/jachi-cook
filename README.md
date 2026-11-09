@@ -29,6 +29,7 @@
    - `dist/app.js`의 `GOOGLE_CLIENT_ID`를 발급받은 ID로 바꾸고(비밀값이 아니라 공개 식별자입니다),
    - 환경 변수에 `GOOGLE_CLIENT_ID`와 `SESSION_SECRET`(`openssl rand -base64 32`)을 넣습니다.
    둘 중 하나라도 없으면 로그인은 503으로 거절되고 앱은 로그인 없이 그대로 동작합니다.
+   Vercel 함수는 파일을 쓸 수 없으므로, **2번의 Redis를 연결해야 계정 동기화가 됩니다.** 연결하지 않으면 로그인은 되지만 `/api/state`가 503으로 거절합니다(저장된 척하지 않습니다).
 5. 의견 확인: `vercel env pull .env.local` 후 `node --env-file=.env.local tools/feedback-summary.cjs`.
 
 의견은 정해진 값(답·좋았던 것·아쉬운 점 300자·친구·표시 경로)만 받고 IP는 저장하지 않으며, 전체 분당 30건까지 받습니다. 로그인을 켜면 구글 계정 식별자(`sub`)와 재료·도구·양념·즐겨찾기를 Redis에 `sobok:user:<sub>`로 저장합니다. 이메일·프로필 사진은 저장하지 않고, 이름은 화면 표시용으로만 받아 넘깁니다. AI 기능의 횟수 제한·캐시는 함수 인스턴스 메모리에 있어서 Vercel에서는 인스턴스마다 따로 셉니다. 공개 전 Gemini 키는 무료 한도 키로 두거나 공급자 쪽 한도를 걸어 두세요.

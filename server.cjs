@@ -68,7 +68,11 @@ function fileUserStore(file){
 }
 function defaultUserStore(env=process.env){
  const url=env.UPSTASH_REDIS_REST_URL||env.KV_REST_API_URL,token=env.UPSTASH_REDIS_REST_TOKEN||env.KV_REST_API_TOKEN;
- return url&&token?redisUserStore(redisPipeline(url,token)):fileUserStore(env.USER_FILE||path.join(__dirname,'data','users.json'));
+ if(url&&token)return redisUserStore(redisPipeline(url,token));
+ // Vercel 함수는 파일을 쓸 수 없다. Redis가 없으면 동기화를 끈다(로그인 자체는 된다).
+ // 조용히 실패하면 저장된 줄 알게 되므로, 저장소가 없으면 /api/state가 503으로 거절한다.
+ if(env.VERCEL)return null;
+ return fileUserStore(env.USER_FILE||path.join(__dirname,'data','users.json'));
 }
 
 // 구글 공개키(JWKS): kid로 찾고, Cache-Control이 허락하는 동안 메모리에 둔다.
@@ -210,7 +214,7 @@ function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMI
      let account;
      try{account=await verifyIdToken(JSON.parse(raw)?.credential,{clientId,fetchImpl,now,googleKey});}
      catch{return json(401,{error:'Sign-in rejected'});}
-     const saved=await userStore.read(account.sub).catch(()=>null);
+     const saved=userStore?await userStore.read(account.sub).catch(()=>null):null;
      res.setHeader('Set-Cookie',sessionCookie(req,signSession({sub:account.sub,exp:Math.floor(now()/1000)+SESSION_TTL},sessionSecret),SESSION_TTL));
      return json(200,{account:{name:account.name},state:saved});
     }
@@ -224,6 +228,7 @@ function createHandler({apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMI
     // 계정에 담긴 상태 읽기·쓰기. 들어온 값은 normalizeState를 통과한 것만 저장한다.
     const session=readSession(req,sessionSecret,now);
     if(!session)return json(401,{error:'Sign-in required'});
+    if(!userStore)return json(503,{error:'Sync not configured'});
     if(req.method==='GET')return json(200,{state:await userStore.read(session.sub)});
     if(req.method!=='PUT')return json(405,{error:'GET or PUT required'});
     if(!wantsJson())return json(415,{error:'JSON required'});
